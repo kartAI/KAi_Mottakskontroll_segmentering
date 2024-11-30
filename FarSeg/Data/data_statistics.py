@@ -8,7 +8,7 @@ from tqdm import tqdm
 import rasterio
 import glob
 
-import prepare_data as pd
+import pre_processing as pre
 
 def analyze_tiles(geo_tiffs, building_layer, road_layer, tile_folder):
     # Initializing of statistics:
@@ -24,8 +24,8 @@ def analyze_tiles(geo_tiffs, building_layer, road_layer, tile_folder):
     roads = gpd.read_file(road_layer)
 
     for tif in tqdm(geo_tiffs, 'TIFF files'):
-        pd.clear_output_directory(tile_folder)
-        pd.generate_tiles(tif, tile_folder)
+        pre.clear_output_directory(tile_folder)
+        pre.generate_tiles(tif, tile_folder)
         valid_tiles_list = [os.path.join(tile_folder, f) for f in os.listdir(tile_folder) if f.endswith('.tif')]
         valid_tiles += len(valid_tiles_list)
         total_tiles += 12 * 16 # Each GeoTIFF is divided into 12 x 16 pieces
@@ -49,7 +49,7 @@ def analyze_tiles(geo_tiffs, building_layer, road_layer, tile_folder):
                     tiles_with_roads += 1
                     road_counts[len(tile_roads)] += 1
     
-    pd.clear_output_directory(tile_folder)
+    pre.clear_output_directory(tile_folder)
     
     # Estimates invalid tiles:
     invalid_tiles = total_tiles - valid_tiles

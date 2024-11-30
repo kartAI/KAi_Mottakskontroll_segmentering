@@ -8,8 +8,9 @@ import re
 import rasterio
 from PIL import Image
 import numpy as np
-from train.tif2jpg import geotiff_to_jpg
 import glob
+from rasterio.plot import reshape_as_raster
+
 
 # Increase the image size limit to avoid DecompressionBombWarning
 Image.MAX_IMAGE_PIXELS = None
@@ -22,6 +23,44 @@ def clear_output_directory(output_dir):
     jpg_files = glob.glob(os.path.join(output_dir, '*.jpg'))
     for jpg_file in jpg_files:
         os.remove(jpg_file)
+
+def geotiff_to_jpg(geotiff_path):
+    # Get the folder and filename from the GeoTIFF path
+    folder, filename = os.path.split(geotiff_path)
+    
+    # Create the output filename by replacing .tif or .tiff with .jpg
+    output_filename = os.path.splitext(filename)[0] + '.jpg'
+    output_path = os.path.join(folder, output_filename)
+    
+    # Open the GeoTIFF file
+    with rasterio.open(geotiff_path) as src:
+        # Read the image data
+        image_data = src.read()
+
+        # Convert the image data to a format that PIL can work with
+        # Reshape from (bands, height, width) to (height, width, bands)
+        if image_data.shape[0] == 1:  # If it's a single-band image
+            image_data = np.squeeze(image_data, axis=0)  # Remove the band axis
+            mode = 'L'  # Grayscale
+        else:  # Multiband image (RGB or similar)
+            image_data = reshape_as_raster(image_data)
+            mode = 'RGB'
+
+        # Transpose the image to (height, width, channels)
+        if mode == 'RGB':
+            image_data = image_data.transpose((2, 0, 1))  # Change from (bands, height, width) to (height, width, bands)
+        
+        # Check the dimensions before saving as a JPEG
+
+        # Ensure the output is uint8, which is needed for JPEG
+        if image_data.dtype != np.uint8:
+            image_data = (image_data / np.max(image_data) * 255).astype(np.uint8)
+
+        # Convert NumPy array to PIL image
+        img = Image.fromarray(image_data, mode)
+
+        # Save the image as a JPEG file
+        img.save(output_path, 'JPEG')
 
 def merge_images(tif_folder, segmented_folder, output_original, output_segmented):
     # List of tiles in TIFF format (sorted for consistent positioning)

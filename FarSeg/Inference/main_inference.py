@@ -8,9 +8,9 @@ import rasterio
 import numpy as np
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from data.prepare_data import get_random_geotiff, generate_tiles
-from inference.postProcessing import clear_output_directory, merge_images
-from model.farseg_model import initialize_model
+from Data.pre_processing import get_random_geotiff, generate_tiles
+from Data.post_processing import clear_output_directory, merge_images
+from Model.farseg_model import initialize_model
 from tqdm import tqdm
 
 # Path to model

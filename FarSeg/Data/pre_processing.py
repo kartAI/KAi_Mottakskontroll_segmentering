@@ -1,15 +1,12 @@
 # Data/pre_processing.py
 
 import os
-import sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 import geopandas as gpd
 import rasterio
 from rasterio.windows import Window
 import numpy as np
 from rasterio.features import geometry_mask
-from inference.postProcessing import clear_output_directory
+from post_processing import clear_output_directory
 from torch.utils.data import Dataset
 import torch
 from tqdm import tqdm

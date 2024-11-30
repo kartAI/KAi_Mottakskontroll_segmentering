@@ -6,7 +6,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import torch
 from tqdm import tqdm
-from model.farseg_model import EarlyStopping
+from Model.farseg_model import EarlyStopping
 
 def train(model, train_loader, val_loader, criterion, optimizer, num_epochs):
     """Training loop for FarSeg."""

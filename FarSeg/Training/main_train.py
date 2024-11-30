@@ -6,9 +6,9 @@ if __name__ == '__main__':
     import os
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-    from data.prepare_data import MapSegmentationDataset, load_geopackages, split_data, generate_tiles
-    from model.farseg_model import initialize_model
-    from train.train_model import train
+    from Data.pre_processing import MapSegmentationDataset, load_geopackages, split_data, generate_tiles
+    from Model.farseg_model import initialize_model
+    from Training.train_model import train
     from torch.utils.data import DataLoader
     import torch
     import glob

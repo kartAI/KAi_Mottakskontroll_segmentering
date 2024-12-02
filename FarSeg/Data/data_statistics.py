@@ -92,7 +92,7 @@ building_layer = "C:/Users/jshjelse/Documents/Prosjektoppgave/Geopackage/Ver2/1_
 road_layer = "C:/Users/jshjelse/Documents/Prosjektoppgave/Geopackage/Ver2/2_Veg_Aktuelle_Flater.gpkg"
 
 # This folder is created automatically:
-tile_folder = "~/KAi_Mottakskontroll_segmentering/FarSeg/Data/Tiles"
+tile_folder = "./FarSeg/Data/Tiles"
 os.makedirs(tile_folder, exist_ok=True)
 
 statistics = analyze_tiles(geo_tiffs, building_layer, road_layer, tile_folder)

@@ -2,14 +2,18 @@
 
 # Imports libraries:
 
+import sys
 import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from Data.pre_processing import get_random_geotiff, generate_tiles
+from Data.post_processing import clear_output_directory, merge_images
+from Model.farseg_model import initialize_model
+
 import torch
 import torchvision.transforms as T
 import rasterio
 import numpy as np
-from Data.pre_processing import get_random_geotiff, generate_tiles
-from Data.post_processing import clear_output_directory, merge_images
-from Model.farseg_model import initialize_model
 from tqdm import tqdm
 
 # Program:
@@ -17,8 +21,8 @@ from tqdm import tqdm
 # Path to model
 modelPath = 'C:/Users/jshjelse/Documents/Prosjektoppgave/Model/trained_farseg_model_ByggVei.pth'
 ortophoto_path = 'C:/Users/jshjelse/Documents/Prosjektoppgave/GeoTIFF_Inference'
-tile_folder = 'C:/Users/jshjelse/Documents/Prosjektoppgave/FarSeg/inference/Tiles/tiles'
-segmented_output_dir = 'C:/Users/jshjelse/Documents/Prosjektoppgave/FarSeg/inference/Tiles/segmented'
+tile_folder = './FarSeg/Inference/Tiles/tiles'
+segmented_output_dir = './FarSeg/Inference/Tiles/segmented'
 
 # Ensuring that the folders exists:
 os.makedirs(tile_folder, exist_ok=True)
@@ -52,14 +56,14 @@ splitted_geotiffs = [os.path.join(tile_folder, f) for f in os.listdir(tile_folde
 color_map = {
             0: [0, 0, 0],        # Background - Black
             1: [255, 0, 0],      # Buildings - Red
-            2: [255, 255, 0],    # Roads - Yellow
+            2: [255, 255, 0]     # Roads - Yellow
         }
 
 # Convert the color map dictionary to a NumPy array
 colors = np.array([color_map[i] for i in range(num_classes)], dtype=np.uint8) # Return RGB colors
 
 # Define class names for the legend
-class_names = ["Background", "Buildings", "Road"]
+class_names = ["Background", "Building", "Road"]
 
 for i, geotiff in tqdm(enumerate(splitted_geotiffs), "GeoTIFFs"):
     with rasterio.open(geotiff) as src: 
@@ -112,7 +116,7 @@ for i, geotiff in tqdm(enumerate(splitted_geotiffs), "GeoTIFFs"):
         dst.write(segmented_image_rgb[:, :, 2], 3) # Blue channel
 
 # Merge all tiles into a final combined image
-output_folder = 'C:/Users/jshjelse/Documents/Prosjektoppgave/FarSeg/inference/Final result/'
+output_folder = './FarSeg/Inference/Final result/'
 os.makedirs(output_folder, exist_ok=True)
 
 output_original = 'C:/Users/jshjelse/Documents/Prosjektoppgave/FarSeg/inference/Final result/merged_original_tif.tif'

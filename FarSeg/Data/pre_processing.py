@@ -2,13 +2,17 @@
 
 # Imports libraries:
 
+import sys
 import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from Data.post_processing import clear_output_directory
+
 import geopandas as gpd
 import rasterio
 from rasterio.windows import Window
 import numpy as np
 from rasterio.features import geometry_mask
-from post_processing import clear_output_directory
 from torch.utils.data import Dataset
 import torch
 from tqdm import tqdm
@@ -172,7 +176,7 @@ def split_data(geotiff_dir, split_ratio=0.7):
     split_idx = int(len(geotiff_files) * split_ratio)
     return geotiff_files[:split_idx], geotiff_files[split_idx:]
 
-def save_tile(src, window, transform, output_path, nodata_value, tile_width=1000, tile_height=1000):
+def save_tile(src, window, transform, output_path, nodata_value, tile_width=1024, tile_height=1024):
     """
     Save a tile to a new GeoTIFF file
 
@@ -234,7 +238,7 @@ def tile_contains_valid_data(tile_data, nodata_value):
         # If no nodata value is defined, assume all pixels have valid data
         return True
 
-def generate_tiles(input_geotiff, output_dir, tile_width=1000, tile_height=1000):
+def generate_tiles(input_geotiff, output_dir, tile_width=1024, tile_height=1024):
     """
     Splits a GeoTIFF into fixed-size tiles without overlap, padding edges as necessary
     

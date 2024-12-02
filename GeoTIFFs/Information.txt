@@ -1,1 +1,0 @@
-Here the GeoTIFF files used for training and prediction must be stored.

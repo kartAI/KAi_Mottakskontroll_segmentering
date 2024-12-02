@@ -1,1 +1,0 @@
-In this folder, the trained FarSeg models will be saved.

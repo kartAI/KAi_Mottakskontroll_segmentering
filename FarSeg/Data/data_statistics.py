@@ -9,6 +9,7 @@ from shapely.geometry import box
 from tqdm import tqdm
 import rasterio
 import glob
+import matplotlib.pyplot as plt
 
 import pre_processing as pre
 
@@ -99,3 +100,27 @@ statistics = analyze_tiles(geo_tiffs, building_layer, road_layer, tile_folder)
 # Write results:
 for key, value in statistics.items():
     print(f"{key}: {value}")
+
+buildings, roads = statistics["Building_distribution"], statistics["Road_distribution"]
+
+# Plot results:
+
+plt.figure(figsize=(14,6))
+plt.bar(buildings.keys(), buildings.values(), color='skyblue', alpha=0.7)
+plt.title('Buildings per Tile', fontsize=16)
+plt.xlabel('Number of Buildings per Tile', fontsize=12)
+plt.ylabel('Number of Tiles', fontsize=12)
+plt.xticks(list(buildings.keys()), rotation=90)
+plt.grid(axis='y', linestyle='--', alpha=0.7)
+plt.tight_layout()
+plt.show()
+
+plt.figure(figsize=(14,6))
+plt.bar(roads.keys(), roads.values(), color='skyblue', alpha=0.7)
+plt.title('Roads per Tile', fontsize=16)
+plt.xlabel('Number of Roads per Tile', fontsize=12)
+plt.ylabel('Number of Tiles', fontsize=12)
+plt.xticks(list(roads.keys()), rotation=90)
+plt.grid(axis='y', linestyle='--', alpha=0.7)
+plt.tight_layout()
+plt.show()

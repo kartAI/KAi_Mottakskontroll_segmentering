@@ -1,5 +1,7 @@
 # Data/pre_processing.py
 
+# Imports libraries:
+
 import os
 import geopandas as gpd
 import rasterio
@@ -13,12 +15,26 @@ from tqdm import tqdm
 import random
 from shapely.validation import make_valid
 
+# Class:
+
 class MapSegmentationDataset(Dataset):
+    """
+    Creates a Dataset corresponding to the PyTorch system wit Dataset and Dataloaders
+
+    Attributes:
+        geotiff_list (list of strings): List of GeoTIFF file paths
+        geodata (dict): Dictionary with 'buildings' and 'roads' GeoDataFrames
+        transform (dict): Optional, any data augmentation or transformations
+    """
+
     def __init__(self, geotiff_list, geodata, transform=None):
         """
-        geotiff_list: List of GeoTIFF file paths.
-        geodata: Dictionary with 'buildings', 'roads', and 'water' GeoDataFrames.
-        transform: Optional, any data augmentation or transformations.
+        Creates a new instance of a MapSegmentationDataset
+
+        Args:
+            geotiff_list (list of strings): List of GeoTIFF file paths
+            geodata (dict): Dictionary with 'buildings' and 'roads' GeoDataFrames
+            transform (dict): Optional, any data augmentation or transformations
         """
         
         self.geotiff_list = geotiff_list
@@ -29,36 +45,37 @@ class MapSegmentationDataset(Dataset):
         return len(self.geotiff_list)
     
     def __getitem__(self, idx):
-        #print(f"Fetching item {idx}")  # Debugging line
+        """
+        Fetches one of the elements in the data set
 
+        Args:
+            idx (int): The index of the object in the data set to fetch
+
+        Returns:
+            image_tensor (ndarray): A ndarray representation of the image
+            label_mask_tensor (ndarray): A ndarray representation of the mask of the image
+        """
+        
         geotiff_path = self.geotiff_list[idx]
         
-        # Load the image (you may want to preprocess this further)
+        # Load the image
         with rasterio.open(geotiff_path) as src:
-            image = src.read()  # Read all bands of the image
+            image = src.read()
             transform = src.transform
             out_shape = (src.height, src.width)
         
         # Reproject geometries to match the CRS of the current GeoTIFF
         building_geometries = self.geodata['buildings'].to_crs(src.crs)['geometry'].values
         road_geometries = self.geodata['roads'].to_crs(src.crs)['geometry'].values
-        #water_geometries = self.geodata['water'].to_crs(src.crs)['geometry'].values
 
         # Rasterize the geometries for each class
         building_mask = geometry_mask(building_geometries, transform=transform, invert=True, out_shape=out_shape)
         road_mask = geometry_mask(road_geometries, transform=transform, invert=True, out_shape=out_shape)
-        #water_mask = geometry_mask(water_geometries, transform=transform, invert=True, out_shape=out_shape)
         
-        # Combine the masks into a single-channel label (0: background, 1: buildings, 2: roads, 3: water)
+        # Combine the masks into a single-channel label (0: background, 1: buildings, 2: roads)
         label_mask = np.zeros(out_shape, dtype=np.uint8)  # Initialize background as class 0
         label_mask[building_mask] = 1   # Class 1 for buildings
         label_mask[road_mask] = 2       # Class 2 for roads
-        #label_mask[water_mask] = 3     # Class 3 for water
-
-        """
-        # Save the colored mask
-        self.save_colored_mask(label_mask, geotiff_path)
-        """
 
         # Convert image and masks to PyTorch tensors
         image_tensor = torch.from_numpy(image).float()  # Convert image to float tensor
@@ -69,47 +86,20 @@ class MapSegmentationDataset(Dataset):
             image_tensor, label_mask_tensor = self.transform(image_tensor, label_mask_tensor)
         
         return image_tensor, label_mask_tensor
-    
-    def save_colored_mask(self, label_mask, geotiff_path):
-        """Save the colored mask as a georeferenced GeoTIFF with color interpretation."""
-        color_map = {
-            0: [0, 0, 0],        # Background - Black
-            1: [255, 0, 0],      # Buildings - Red
-            2: [255, 255, 0],    # Roads - Yellow
-            #3: [173, 216, 230]   # Water - Light Blue
-        }
 
-        colored_mask = np.zeros((label_mask.shape[0], label_mask.shape[1], 3), dtype=np.uint8)
-
-        # Apply color mapping
-        for label, color in color_map.items():
-            colored_mask[label_mask == label] = color
-
-        # Save the colored mask as a georeferenced GeoTIFF
-        with rasterio.open(geotiff_path) as src:
-            profile = src.profile.copy()
-            profile.update({
-                'dtype': 'uint8',
-                'count': 3,         # 3 channels for RGB
-                'compress': 'lzw',  # Optional: Compression
-            })
-
-            # Define output filename for the colored mask
-            mask_filename = os.path.splitext(geotiff_path)[0] + '_mask.tif'
-            print(f"Saving mask to {mask_filename}")
-
-            # Write the colored mask to a new GeoTIFF with color interpretation
-            with rasterio.open(mask_filename, 'w', **profile) as dst:
-                dst.write(colored_mask[:, :, 0], 1)  # Write R band
-                dst.write(colored_mask[:, :, 1], 2)  # Write G band
-                dst.write(colored_mask[:, :, 2], 3)  # Write B band
-
-                # Set color interpretation for each band (so QGIS recognizes it as RGB)
-                dst.colorinterp = [rasterio.enums.ColorInterp.red,
-                                rasterio.enums.ColorInterp.green,
-                                rasterio.enums.ColorInterp.blue]
+# Functions:
 
 def get_random_geotiff(folder_path):
+    """
+    Fetches a random GeoTIFF file
+
+    Args:
+        folder_path (string): The file path to the folder containing the GeoTIFFs
+
+    Returns:
+        string: The file path to the GeoTIFF, if one exists
+    """
+
     # Get a list of all files in the folder
     all_files = os.listdir(folder_path)
     total_files = len(all_files)
@@ -136,12 +126,18 @@ def get_random_geotiff(folder_path):
 
 def load_geopackages(geopackage_folder):
     """
-    Load geometries for buildings, roads, and water from multiple GeoPackages in a folder.
+    Load geometries for buildings and roads from multiple GeoPackages in a folder
+
+    Args:
+        geopackage_folder (string): File path to the folder containing the geopackages
+    
+    Returns:
+        geodata (dict): Dictionary containing all the GeoDataFrames for buildings and roads
     """
 
     geopackage_files = [os.path.join(geopackage_folder, f) for f in os.listdir(geopackage_folder) if f.endswith('.gpkg')]
     
-    types = ["buildings", "roads"] #, "water"]
+    types = ["buildings", "roads"]
 
     geodata = {}
 
@@ -158,17 +154,37 @@ def load_geopackages(geopackage_folder):
 
         geodata[types[i]] = gdf
 
-    return geodata  # Returns a dictionary with 'roads', 'buildings', and 'water' GeoDataFrames
+    return geodata  # Returns a dictionary with 'building' and 'road' GeoDataFrames
 
 def split_data(geotiff_dir, split_ratio=0.7):
-    """Split geotiffs into training and validation sets."""
+    """
+    Split geotiffs into training and validation sets
+    
+    Args:
+        geotiff_dir (string): File path to the folder containing all the GeoTIFFs
+        split_ratio (float): A float number showing the split ratio between training and validation set, default is 0.7
+    
+    Returns:
+        lists: two lists (one training and one validation) with 70 / 30 split containing file paths to the GeoTIFF files
+    """
     geotiff_files = [os.path.join(geotiff_dir, f) for f in os.listdir(geotiff_dir) if f.endswith('.tif')]
     np.random.shuffle(geotiff_files)
     split_idx = int(len(geotiff_files) * split_ratio)
     return geotiff_files[:split_idx], geotiff_files[split_idx:]
 
-def save_tile(src, window, transform, output_path, nodata_value, tile_width=1024, tile_height=1024):
-    """Save a tile to a new GeoTIFF file, padding if necessary."""
+def save_tile(src, window, transform, output_path, nodata_value, tile_width=1000, tile_height=1000):
+    """
+    Save a tile to a new GeoTIFF file
+
+    Args:
+        src (rasterio extension): Rasterio extension describing the resolution of the image / tile
+        window (rasterio Window): Rasterio Window object containing the height and width of the image
+        transform (rasterio): Rasterio transform fetched from the origin image
+        output_path (string): file path to the folder with file name of the saved tile
+        nodata_value (int): Nodata value read by rasterio (default = 0)
+        tile_width (int): Width of the tile (default = 1000)
+        tile_height (int): Height of the tile (default = 1000)
+    """
     
     # Read the tile data, handling cases where the window exceeds the bounds
     tile_data = src.read(window=window, boundless=True, fill_value=nodata_value)
@@ -200,7 +216,17 @@ def save_tile(src, window, transform, output_path, nodata_value, tile_width=1024
         dst.write(tile_data)
 
 def tile_contains_valid_data(tile_data, nodata_value):
-    """Check if all pixels in the tile contain valid data (none are nodata pixels)."""
+    """
+    Checks if not all pixels in the tile contains nodata value (none of the pixels having valid data / pixels)
+
+    Args:
+        tile_data (rasterio): The content of the image read by rasterio
+        nodata_value (int): The nodata value of the image read by rasterio
+    
+    Returns:
+        boolean: Wether or not some of the tiles are valid (all pixels equal nodata value = False, otherwise = True)
+    """
+
     if nodata_value is not None:
         # Check if all pixel is nodata; if so, return False
         return not np.all(tile_data == nodata_value)
@@ -208,8 +234,16 @@ def tile_contains_valid_data(tile_data, nodata_value):
         # If no nodata value is defined, assume all pixels have valid data
         return True
 
-def generate_tiles(input_geotiff, output_dir, tile_width=1024, tile_height=1024):
-    """Split a GeoTIFF into fixed-size tiles without overlap, padding edges as necessary."""
+def generate_tiles(input_geotiff, output_dir, tile_width=1000, tile_height=1000):
+    """
+    Splits a GeoTIFF into fixed-size tiles without overlap, padding edges as necessary
+    
+    Args:
+        input_geotiff (string): File path to the GeoTIFF
+        output_dir (string): File path to the output folder
+        tile_width (int): Width of the tile (default = 1000)
+        tile_height (int): Height of the tile (default = 1000)
+    """
     
     # Clear any existing .tif files in the output directory
     clear_output_directory(output_dir)
@@ -225,7 +259,7 @@ def generate_tiles(input_geotiff, output_dir, tile_width=1024, tile_height=1024)
         num_tiles_y = (img_height + tile_height - 1) // tile_height
 
         # Iterate over the grid without overlap
-        for i in tqdm(range(num_tiles_y), 'Tiles'):
+        for i in tqdm(range(num_tiles_y), 'Tile rows'):
             for j in range(num_tiles_x):
                 # Calculate the window position without overlap
                 x_off = j * tile_width
@@ -245,5 +279,3 @@ def generate_tiles(input_geotiff, output_dir, tile_width=1024, tile_height=1024)
 
                     # Save the tile with padding if necessary
                     save_tile(src, window, new_transform, output_filename, nodata_value, tile_width, tile_height)
-                else:
-                    print(f"Skipped empty tile at ({i}, {j})")

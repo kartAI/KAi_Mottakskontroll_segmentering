@@ -2,10 +2,9 @@
 
 if __name__ == '__main__':
 
-    import sys
-    import os
-    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+    # Imports libraries:
 
+    import os
     from Data.pre_processing import MapSegmentationDataset, load_geopackages, split_data, generate_tiles
     from Model.farseg_model import initialize_model
     from Training.train_model import train
@@ -14,23 +13,25 @@ if __name__ == '__main__':
     import glob
     from tqdm import tqdm
 
-    # Paths to data
-    # Folder with three geopackage files: roads, buildings and water
-    geopackage_folder = 'C:/Users/jshjelse/Documents/Prosjektoppgave/Geopackage/Ver2'
-    # Folder with hundreds of different, small GeoTIFFs
-    geotiff_folder = 'C:/images_mj' # 'C:/Users/jshjelse/Documents/Prosjektoppgave/GeoTIFF_Train'
-    # Where the different tiles will be saved
-    tile_folder = 'C:/Users/jshjelse/Documents/Prosjektoppgave/FarSeg/train/Tiles'
+    # Program:
 
+    # Paths to data
+    # Folder with geopackage files: buildings and roads
+    geopackage_folder = 'C:/Users/jshjelse/Documents/Prosjektoppgave/Geopackage/Ver2'
+    # Folder with hundreds of different GeoTIFFs
+    geotiff_folder = 'C:/images_mj' # 'C:/Users/jshjelse/Documents/Prosjektoppgave/GeoTIFF_Train'
+    
+    # Where the different tiles will be saved
+    tile_folder = '~/Documents/Prosjektoppgave/FarSeg/train/Tiles'
     # Create the tile folder if it doesn't exist
     os.makedirs(tile_folder, exist_ok=True)
 
     # Load the data
-    geopackages = load_geopackages(geopackage_folder) # [Roads, Buildings, Water]
+    geopackages = load_geopackages(geopackage_folder) # [Buildings, Roads]
     print("Geopackage loaded")
 
     # Initialize model, loss function, and optimizer
-    num_classes = 3 # 4
+    num_classes = 3
     model, criterion, optimizer = initialize_model(num_classes, lr=1e-4)
     print("Model initialized")
 
@@ -39,8 +40,8 @@ if __name__ == '__main__':
 
     if len(tif_files) > 100:
         print(f"Number of GeoTIFF files {len(tif_files)}.")
-        print("Takes the first 19/20 only.")
-        tif_files = tif_files[:int(0.95 * len(tif_files))]
+        print("Takes the first 9/10 only.")
+        tif_files = tif_files[:int(0.9 * len(tif_files))]
         print(f"Number of GeoTIFF files {len(tif_files)}.")
 
     # Loop through each GeoTIFF file
@@ -73,6 +74,8 @@ if __name__ == '__main__':
         torch.cuda.empty_cache()
 
     # Save the trained model after training
+    model_path = 'C:/Users/jshjelse/Documents/Prosjektoppgave/Model/'
+    os.makedirs(model_path, exist_ok=True)    
     model_name = 'C:/Users/jshjelse/Documents/Prosjektoppgave/Model/trained_farseg_model_ByggVei_2.pth'
     torch.save(model.state_dict(), model_name)
     print("Model saved")

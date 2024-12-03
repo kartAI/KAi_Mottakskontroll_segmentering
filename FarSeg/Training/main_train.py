@@ -8,7 +8,8 @@ if __name__ == '__main__':
     import os
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-    from Data.pre_processing import MapSegmentationDataset, load_geopackages, split_data, generate_tiles
+    from Data.pre_processing import MapSegmentationDataset, load_geopackages, split_data_list, generate_tiles
+    from Data.validateTile import tileValidation
     from Model.farseg_model import initialize_model
     from Training.train_model import train
     from torch.utils.data import DataLoader
@@ -33,6 +34,8 @@ if __name__ == '__main__':
     geopackages = load_geopackages(geopackage_folder) # [Buildings, Roads]
     print("Geopackage loaded")
 
+    tileController = tileValidation(glob.glob(geopackage_folder + '/*.gpkg'))
+
     # Initialize model, loss function, and optimizer
     num_classes = 3
     model, criterion, optimizer = initialize_model(num_classes, lr=1e-4)
@@ -53,9 +56,22 @@ if __name__ == '__main__':
         # Step 1: Generate tiles for the current GeoTIFF
         generate_tiles(tif, tile_folder)
 
+        valid_tiles = tileController.validate(tile_folder)
+
+        if len(valid_tiles) == 0:
+            continue
+        
         # Step 2: Split tiles into training and validation sets
-        train_files, val_files = split_data(tile_folder)
-        print(f"GeoTIFF {tif} split into training and validation tiles")
+        train_files, val_files = split_data_list(valid_tiles)
+        print(f"""GeoTIFF {tif} split into training and validation tiles.
+              Valid tiles: {len(valid_tiles)}
+                Train tiles: {len(train_files)}
+                Validation tiles: {len(val_files)}""")
+
+        if train_files == None or val_files == None:
+            continue
+        if len(train_files) == 0 or len(val_files) == 0:
+            continue
 
         batches = 5
         epochs = 100
@@ -80,6 +96,6 @@ if __name__ == '__main__':
     # Save the trained model after training
     model_path = './Model/'
     os.makedirs(model_path, exist_ok=True)    
-    model_name = './Model/trained_farseg_model_test.pth'
+    model_name = './Model/trained_farseg_model_ByggVei_3.pth'
     torch.save(model.state_dict(), model_name)
     print("Model saved")

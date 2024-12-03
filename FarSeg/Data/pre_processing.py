@@ -162,19 +162,34 @@ def load_geopackages(geopackage_folder):
 
 def split_data(geotiff_dir, split_ratio=0.7):
     """
-    Split geotiffs into training and validation sets
+    Split geotiffs from folder into training and validation sets
     
     Args:
         geotiff_dir (string): File path to the folder containing all the GeoTIFFs
         split_ratio (float): A float number showing the split ratio between training and validation set, default is 0.7
     
     Returns:
-        lists: two lists (one training and one validation) with 70 / 30 split containing file paths to the GeoTIFF files
+        lists: two lists (one training and one validation) with 70 / 30 split containing file paths to the GeoTIFF files, if they exists
     """
     geotiff_files = [os.path.join(geotiff_dir, f) for f in os.listdir(geotiff_dir) if f.endswith('.tif')]
     np.random.shuffle(geotiff_files)
     split_idx = int(len(geotiff_files) * split_ratio)
     return geotiff_files[:split_idx], geotiff_files[split_idx:]
+
+def split_data_list(geotiffs, split_ratio=0.7):
+    """
+    Split geotiffs from folder into training and validation sets
+    
+    Args:
+        geotiffs (list of strings): List of all the file paths to the GeoTIFFs
+        split_ratio (float): A float number showing the split ratio between training and validation set, default is 0.7
+    
+    Returns:
+        lists: two lists (one training and one validation) with 70 / 30 split containing file paths to the GeoTIFF files, if they exists
+    """
+    np.random.shuffle(geotiffs)
+    split_idx = int(len(geotiffs) * split_ratio)
+    return geotiffs[:split_idx], geotiffs[split_idx:]
 
 def save_tile(src, window, transform, output_path, nodata_value, tile_width=1024, tile_height=1024):
     """

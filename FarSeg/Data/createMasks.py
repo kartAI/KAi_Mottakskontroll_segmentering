@@ -1,23 +1,27 @@
 # Data/createMasks.py
 
+import sys
 import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import glob
 import rasterio
 from rasterio.features import rasterize
 import numpy as np
 from PIL import Image
 from tqdm import tqdm
-import data.prepare_data as D
+import Data.pre_processing as pre
 
 def create_masks_and_save_images(geotiff_folder, geopackage_data, output_folder):
     """
-    Generate masks excluding the 'water' layer and save both the masks and the original GeoTIFFs as JPGs.
+    Generate masks and save both the masks and the original GeoTIFFs as JPGs.
 
     Parameters:
     - geotiff_folder: Folder containing GeoTIFF files.
-    - geopackage_data: Dictionary with GeoDataFrames for 'roads' and 'buildings'.
+    - geopackage_data: Dictionary with GeoDataFrames for 'buildings' and 'roads'.
     - output_folder: Folder to save the mask JPG and original GeoTIFF JPG files.
     """
+    
     # Ensure the output folder exists
     os.makedirs(output_folder, exist_ok=True)
 
@@ -41,6 +45,21 @@ def create_masks_and_save_images(geotiff_folder, geopackage_data, output_folder)
             original_image = Image.fromarray(image_data)
             original_image.save(original_jpg_filename, format='JPEG')
 
+            # Save the original GeoTIFF as TIFF
+            original_tif_filename = os.path.join(output_folder, os.path.basename(tif_file).replace('.tif', '_original.tif'))
+            with rasterio.open(
+                original_tif_filename,
+                'w',
+                driver='GTiff',
+                height=src.height,
+                width=src.width,
+                count=image_data.shape[2],
+                dtype=image_data.dtype,
+                crs=src.crs,
+                transform=src.transform
+            ) as dst:
+                dst.write(np.transpose(image_data, [2, 0, 1])) # Back to [bands, height, width]
+
             # Create mask RGB (only two layers: roads and buildings)
             rgb_mask = np.zeros((src.height, src.width, 3), dtype='uint8')  # RGB mask image
 
@@ -61,19 +80,34 @@ def create_masks_and_save_images(geotiff_folder, geopackage_data, output_folder)
                         rgb_mask[:, :, channel] += (layer_mask * value).astype('uint8')
 
             # Save the mask as JPG
-            mask_filename = os.path.join(output_folder, os.path.basename(tif_file).replace('.tif', '_mask.jpg'))
+            mask_jpg_filename = os.path.join(output_folder, os.path.basename(tif_file).replace('.tif', '_mask.jpg'))
             mask_image = Image.fromarray(rgb_mask)
-            mask_image.save(mask_filename, format='JPEG')
+            mask_image.save(mask_jpg_filename, format='JPEG')
+
+            # Save the mask as TIFF
+            mask_tif_filename = os.path.join(output_folder, os.path.basename(tif_file).replace('.tif', '_mask.tif'))
+            with rasterio.open(
+                mask_tif_filename,
+                'w',
+                driver='GTiff',
+                height=src.height,
+                width=src.width,
+                count=3,
+                dtype=image_data.dtype,
+                crs=src.crs,
+                transform=src.transform
+            ) as dst:
+                dst.write(np.transpose(rgb_mask, [2, 0, 1])) # Back to [bands, height, width]
 
 # Paths to data
 # Folder with three geopackage files: buildings, roads and water
-geopackage_folder = '/home/geostud/Elements_mnt/jakobhje/data/Geopackage_Farsund/Test_data_correct_Polygons'
+geopackage_folder = 'C:/Users/jshjelse/Documents/Prosjektoppgave/Geopackage/Ver2'
 # Folder with hundreds of different, small GeoTIFFs
-geotiff_folder = '/home/geostud/Elements_mnt/jakobhje/data/ortophoto/ortophoto_train_specific/'
+geotiff_folder = 'C:/Users/jshjelse/Documents/Prosjektoppgave/GeoTIFF_Train'
 
-output_folder = '/home/jakobhje/Prosjektoppgave_Host_2024/step1/farseg_segmentation/Masker'
+output_folder = './FarSeg/Data/Masks'
 
-geopackages = D.load_geopackages(geopackage_folder) # [Buildings, Roads, Water]
+geopackages = pre.load_geopackages(geopackage_folder) # [Buildings, Roads]
 
 # Create masks
 create_masks_and_save_images(geotiff_folder, geopackages, output_folder)

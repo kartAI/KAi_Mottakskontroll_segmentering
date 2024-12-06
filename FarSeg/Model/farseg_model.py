@@ -69,4 +69,3 @@ class EarlyStopping:
         else:
             self.best_score = val_loss
             self.counter = 0
-

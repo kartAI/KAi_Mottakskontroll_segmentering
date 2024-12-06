@@ -6,9 +6,10 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+from Model.farseg_model import EarlyStopping
+
 import torch
 from tqdm import tqdm
-from Model.farseg_model import EarlyStopping
 
 # Functions:
 

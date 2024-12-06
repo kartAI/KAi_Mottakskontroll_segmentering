@@ -109,7 +109,8 @@ def merge_images(tif_folder, segmented_folder, output_original, output_segmented
         "height": rows * tile_height,
         "width": cols * tile_width,
         "count": 3,  # 3 bands for RGB output
-        "dtype": "uint8"
+        "dtype": "uint8",
+        "photometric": "RGB"
     })
 
     # Prepare large arrays for combined images
@@ -146,12 +147,14 @@ def merge_images(tif_folder, segmented_folder, output_original, output_segmented
     # Save the merged original image as GeoTIFF
     with rasterio.open(output_original, "w", **profile) as dst:
         for band in range(3):
-            dst.write(full_original_image[:, :, band], band + 1)
+            dst.write(np.transpose(full_original_image, (2, 0, 1)))
+            #dst.write(full_original_image[:, :, band], band + 1)
 
     # Save the merged segmented image as GeoTIFF
     with rasterio.open(output_segmented, "w", **profile) as dst:
         for band in range(3):
-            dst.write(full_segmented_image[:, :, band], band + 1)
+            dst.write(np.transpose(full_segmented_image, (2, 0, 1)))
+            #dst.write(full_segmented_image[:, :, band], band + 1)
 
     # Convert final GeoTIFF to JPG
     geotiff_to_jpg(output_original)

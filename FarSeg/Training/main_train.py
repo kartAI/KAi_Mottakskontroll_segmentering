@@ -12,6 +12,7 @@ if __name__ == '__main__':
     from Data.validateTile import tileValidation
     from Model.farseg_model import initialize_model
     from Training.train_model import train
+    
     from torch.utils.data import DataLoader
     import torch
     import glob

@@ -20,7 +20,7 @@ import glob
 # Program:
 
 # Path to model
-modelPath = 'C:/Users/jshjelse/Documents/Prosjektoppgave/Model/trained_farseg_model_ByggVei.pth'
+modelPath = 'C:/Users/jshjelse/Documents/Prosjektoppgave/Model/trained_farseg_model_ByggVei_3.pth'
 ortophoto_path = 'C:/images_mj'
 tile_folder = './FarSeg/Inference/Tiles/tiles'
 segmented_output_dir = './FarSeg/Inference/Tiles/segmented'
@@ -102,7 +102,7 @@ for k, path in enumerate(geotiff_paths):
 
         # Apply the transform (ToTensor converts image to shape: (bands, height, width))
         image_tensor = transform(image).unsqueeze(0).to(device) # Add batch dimension for model input
-
+        
         with torch.no_grad():
             output = model(image_tensor) # Forward pass through the model
             predicted_segmented_mask = output.squeeze(0).argmax(0).cpu().numpy() # Shape: (height, width)
@@ -113,13 +113,18 @@ for k, path in enumerate(geotiff_paths):
         # Update the profile to save as RGB GeoTIFF
         profile.update({
             'count': 3, # 3 channels for RGB
-            'dtype': 'uint8'
+            'dtype': 'uint8',
+            'photometric': 'RGB'
         })
 
         # Save as GeoTIFF
-        output_filename = os.path.splitext(os.path.basename(geotiff))[0] + f'_segmented.tif'
+        output_filename = os.path.splitext(os.path.basename(geotiff))[0] + '_segmented.tif'
         geotiff_output_filepath = os.path.join(segmented_output_dir, output_filename)
-        with rasterio.open(geotiff_output_filepath, 'w', **profile) as dst:
+        with rasterio.open(
+            geotiff_output_filepath,
+            'w',
+            **profile
+        ) as dst:
             dst.write(segmented_image_rgb[:, :, 0], 1) # Red channel
             dst.write(segmented_image_rgb[:, :, 1], 2) # Green channel
             dst.write(segmented_image_rgb[:, :, 2], 3) # Blue channel

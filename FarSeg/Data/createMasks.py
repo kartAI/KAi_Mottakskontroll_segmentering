@@ -34,7 +34,7 @@ def create_masks_and_save_images(geotiff_folder, geopackage_data, output_folder)
         with rasterio.open(tif_file) as src:
             # Read the GeoTIFF data
             image_data = src.read()
-            image_data = np.transpose(image_data, (1, 2, 0))  # Rearrange to (height, width, bands)
+            image_data = np.transpose(image_data, (1, 2, 0)) # Rearrange to (height, width, bands)
 
             # Normalize data if required
             if image_data.dtype != np.uint8:  # If the data is not 8-bit

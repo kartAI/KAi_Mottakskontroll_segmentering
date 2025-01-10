@@ -1,15 +1,16 @@
 # FarSeg_dev/Functionality/geoTIFFandJPEG.py
 
-# Imports libraries:
+# Libraries:
 
-import glob
 import numpy as np
 import os
 from PIL import Image
 import rasterio
 from rasterio.features import rasterize
 
-# Classes:
+import generalFunctions as gf
+
+# Class:
 
 class imageSaver():
     """
@@ -18,16 +19,15 @@ class imageSaver():
     Attributes:
         folder (string): A string with the path to the folder containing relevant geopackage data
     """
+
     def __init__(self, folder):
         """
-        Creates a new instance of imageSaver
+        Creates a new instance of imageSaver.
 
         Args:
             folder (string): A string with the path to the folder containing relevant geopackage data
         """
-        self.geopackages = []
-        for file in glob.glob(folder + '/*.gpkg'):
-            self.geopackages.append(file)
+        self.geopackages = gf.load_geopackages(folder)
     
     def readGeoTIFF(self, tif_file):
         """
@@ -129,10 +129,10 @@ class imageSaver():
         # Rasterize geometries for buildings (red) and roads(yellow)
         for layer, color in zip(['buildings', 'roads'], [(255, 0, 0), (255, 255, 0)]):
             if layer in self.geopackages:
-                shapes = [(geom, 1) for geom in self.geopackages if geom.is_valid]
+                shapes = [(geom, 1) for geom in self.geopackages[layer].geometry if geom.is_valid]
                 layer_mask = rasterize(
                     shapes,
-                    out_shape=(metadata["height"], metadata["widht"]),
+                    out_shape=(metadata["height"], metadata["width"]),
                     transform=metadata["transform"],
                     fill=0,
                     dtype="uint8",

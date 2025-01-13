@@ -96,28 +96,28 @@ class validation():
         imageHandler = imageSaver(self.geopackages)
 
         for i in range(len(self.originals)):
-            log_info(log_file, f"Image set: {i + 1}")
+            gf.log_info(log_file, f"Image set: {i + 1}")
             if check_geographic_overlap(self.originals[i], self.segmentations[i]):
                 imageHandler.createMaskGeoTIFF(self.originals[i], mask_folder)
                 mask = glob.glob(mask_folder + '/*.tif')[0]
                 if check_geographic_overlap(self.segmentations[i], mask):
                     IoU_buildings, IoU_roads = calculate_IoU_between_masks(mask, self.segmentations[i])
-                    log_info(log_file, f"Original file: {self.originals[i]}")
-                    log_info(log_file, f"Segmented file: {self.segmentations[i]}")
-                    log_info(log_file, f"Mask file: {mask}")
+                    gf.log_info(log_file, f"Original file: {self.originals[i]}")
+                    gf.log_info(log_file, f"Segmented file: {self.segmentations[i]}")
+                    gf.log_info(log_file, f"Mask file: {mask}")
                     if IoU_buildings != None:
                         count_buildings += 1
                         mIoU_buildings += IoU_buildings
-                        log_info(log_file, f"IoU for buildings: {IoU_buildings}")
+                        gf.log_info(log_file, f"IoU for buildings: {IoU_buildings}")
                     if IoU_roads != None:
                         count_roads += 1
                         mIoU_roads += IoU_roads
-                        log_info(log_file, f"IoU for roads: {IoU_roads}")
+                        gf.log_info(log_file, f"IoU for roads: {IoU_roads}")
             gf.emptyFolder(mask_folder)
         if count_buildings > 0:
-            log_info(log_file, f"mIoU buildings: {mIoU_buildings / count_buildings}")
+            gf.log_info(log_file, f"mIoU buildings: {mIoU_buildings / count_buildings}")
         if count_roads > 0:
-            log_info(log_file, f"mIoU roads: {mIoU_roads / count_roads}")
+            gf.log_info(log_file, f"mIoU roads: {mIoU_roads / count_roads}")
 
 # Helper functions:
 
@@ -209,14 +209,3 @@ def calculate_IoU_between_masks(mask, prediction):
         iou_roads = compute_IoU(road1, road2)
     
     return iou_buildings, iou_roads
-
-def log_info(logfile, message):
-    """
-    Writes the message to the logfile.
-
-    Args:
-        logfile (string): Path to the log file
-        message (string): Text that should be written
-    """
-    with open(logfile, 'a') as f:
-        f.write(message + '/n')

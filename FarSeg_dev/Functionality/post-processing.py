@@ -6,7 +6,6 @@ import numpy as np
 import os
 import re
 
-import generalFunctions as gf
 from geoTIFFandJPEG import imageSaver
 
 #  Class:
@@ -31,14 +30,15 @@ class postProcessor():
         self.geotiff_folder = geotiff_folder
         self.segmented_folder = segmented_folder
     
-    def merge_images(self, original, segmented):
+    def merge_images(self, original, segmented, jpeg=False):
         """
         Combines all GeoTIFF files from a folder into one single .tif file,
         and converts it to .jpg as well.
 
         Args:
-            output_original (string): File path and name of the merged, original output file (aerial image) as .tif file
-            output_segmented (string): File path and name of the merged, segmented output file (segmented image) as .tif file
+            original (string): File path and name of the merged, original output file (aerial image) as .tif file
+            segmented (string): File path and name of the merged, segmented output file (segmented image) as .tif file
+            jpeg (bool): Boolean value telling wether or not to save image as JPEG as well as GeoTIFF
         
         Note:
             The tif_folder and segmented_folder must contain the same number of files
@@ -73,9 +73,30 @@ class postProcessor():
         full_segmented_image = np.zeros((rows * tile_height, cols * tile_width, 3), dtype=profile["dtype"])
         for geotiff_file, segmented_file in zip(geotiffs, segmented_geotiffs):
             row, col = parse_tile_filename(geotiff_file)
-            # Merge original image:
-            original_path = os.path.join(self.geotiff_folder, geotiff_file)
-            # ...
+            # Merge original image by fetching data:
+            image_data, metadata = imageHandler.readGeoTIFF(os.path.join(self.geotiff_folder, geotiff_file))
+            for band in range(3):
+                full_original_image[
+                    row * tile_height : (row + 1) * tile_height,
+                    col * tile_width  : (col + 1) * tile_width,
+                    band
+                ] = image_data[band]
+            # Merge segmented image by fetching data:
+            image_data, metadata = imageHandler.readGeoTIFF(os.path.join(self.segmented_folder, segmented_file))
+            for band in range(3):
+                full_segmented_image[
+                    row * tile_height : (row + 1) * tile_height,
+                    col * tile_width  : (col + 1) * tile_width,
+                    band
+                ] = image_data[band]
+        # Save the merged original image as GeoTIFF:
+        imageHandler.createGeoTIFF(original, profile, full_original_image)
+        # Save the merged segmented image as GeoTIFF:
+        imageHandler.createGeoTIFF(segmented, profile, full_segmented_image)
+        if jpeg:
+            # Convert final GeoTIFF to JPG:
+            imageHandler.saveGeoTIFFasJPEG(original, os.path.dirname(original))
+            imageHandler.saveGeoTIFFasJPEG(segmented, os.path.dirname(segmented))
 
 # Helper functions:
 

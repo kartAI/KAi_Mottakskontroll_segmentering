@@ -167,3 +167,16 @@ class imageSaver():
         """
         mask = self.createMask(tif)
         self.saveGeoTIFFasJPEG(tif, output, mask, False)
+    
+    def createGeoTIFF(self, output, profile, image_array):
+        """
+        Creates a new GeoTIFF based on a given array.
+
+        Args:
+            output (string): Path to the output file
+            profile (dict): A dictionary containing metadata and configuration for the GeoTIFF file
+            image_array (ndarray): An array with the image data
+        """
+        with rasterio.open(output, 'w', **profile) as dst:
+            for band in range(3):
+                dst.write(image_array[:, :, band], band + 1)

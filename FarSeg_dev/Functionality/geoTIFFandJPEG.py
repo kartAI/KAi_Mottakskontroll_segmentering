@@ -17,17 +17,20 @@ class imageSaver():
     Instance handling saving of images as GeoTIFF and JPEG
     
     Attributes:
-        folder (string): A string with the path to the folder containing relevant geopackage data
+        folder (None, string): A string with the path to the folder containing relevant geopackage data, default None
     """
 
-    def __init__(self, folder):
+    def __init__(self, folder=None):
         """
         Creates a new instance of imageSaver.
 
         Args:
             folder (string): A string with the path to the folder containing relevant geopackage data
         """
-        self.geopackages = gf.load_geopackages(folder)
+        if folder != None:
+            self.geopackages = gf.load_geopackages(folder)
+        else:
+            self.geopackages = None
     
     def readGeoTIFF(self, tif_file):
         """
@@ -164,3 +167,16 @@ class imageSaver():
         """
         mask = self.createMask(tif)
         self.saveGeoTIFFasJPEG(tif, output, mask, False)
+    
+    def createGeoTIFF(self, output, profile, image_array):
+        """
+        Creates a new GeoTIFF based on a given array.
+
+        Args:
+            output (string): Path to the output file
+            profile (dict): A dictionary containing metadata and configuration for the GeoTIFF file
+            image_array (ndarray): An array with the image data
+        """
+        with rasterio.open(output, 'w', **profile) as dst:
+            for band in range(3):
+                dst.write(image_array[:, :, band], band + 1)

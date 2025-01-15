@@ -85,3 +85,14 @@ def emptyFolder(folder):
     except Exception as e:
         print(f"En feil oppsto under sletting/oppretting av mappen '{folder}': {e}")
         return False
+
+def log_info(logfile, message):
+    """
+    Writes the message to the logfile.
+
+    Args:
+        logfile (string): Path to the log file
+        message (string): Text that should be written
+    """
+    with open(logfile, 'a') as f:
+        f.write(message + '/n')

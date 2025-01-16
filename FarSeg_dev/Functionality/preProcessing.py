@@ -173,18 +173,22 @@ class preProcessor():
         with rasterio.open(filename, 'w', **profile) as dst:
             dst.write(tile_data)
 
-    def split_data(self, folder):
+    def split_data(self, folder=None, liste=None):
         """
         Splits the GeoTIFFs from the folder in training and validation sets.
 
         Args:
-            folder (string): Path to the folder containing the GeoTIFFs
+            folder (string): Path to the folder containing the GeoTIFFs, default = None
+            liste (list[string]): List of GeoTIFF paths, default = None
         
         Returns:
             list[string]: Lists of file paths, training and validation sets
             If no GeoTIFF files were found, return None
         """
-        files = glob.glob(folder + '/*.tif')
+        if folder != None:
+            files = glob.glob(folder + '/*.tif')
+        elif liste != None:
+            files = liste
         if len(files) == 0:
             return None
         np.random.shuffle(files)

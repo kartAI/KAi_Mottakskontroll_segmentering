@@ -69,6 +69,20 @@ def doesFolderExists(folder):
     """
     return os.path.exists(folder)
 
+def positiveNumber(text):
+    """
+    Checks if the input is a positive integer.
+
+    Args:
+        text (string): Input from the user
+    
+    Returns:
+        bool: Wether or not the input is a positive integer
+    """
+    if text.isdigit():
+        return int(text) > 0
+    return False
+
 def emptyFolder(folder):
     """
     Deletes the folder, if it exists, and creates a new, empty one.

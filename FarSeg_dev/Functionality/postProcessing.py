@@ -1,4 +1,4 @@
-# FarSeg_dev/Functionality/post-processing.py
+# FarSeg_dev/Functionality/postProcessing.py
 
 # Libraries:
 

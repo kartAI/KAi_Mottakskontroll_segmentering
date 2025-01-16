@@ -40,6 +40,57 @@ def yesNo(ans):
     elif ans == "n":
         return False
 
+def get_valid_input(prompt, validator):
+    """
+    A general function checking that user input is valid.
+
+    Args:
+        prompt (string): Text showed to the user when asked for input
+        validator (callable): A function taking a string, returning True for valid input, otherwise False
+    
+    Returns:
+        string: Valid input from user
+    """
+    while True:
+        user_input = input(prompt)
+        if validator(user_input):
+            return user_input
+        print("Invalid input, try again!")
+
+def doesFolderExists(folder):
+    """
+    Checks if a folder exists.
+
+    Args:
+        folder (string): Path to the folder
+    
+    Returns:
+        bool: Wether or not the folder exists
+    """
+    return os.path.exists(folder)
+
+def emptyFolder(folder):
+    """
+    Deletes the folder, if it exists, and creates a new, empty one.
+
+    Args:
+        folder (string): Path to the new folder
+
+    Returns:
+        bool: True if operation succeeds, False otherwise
+    """
+    try:
+        if os.path.exists(folder):
+            if not os.access(folder, os.W_OK): # Checking writing access
+                print(f"Mangler skrivetilgang til '{folder}'.")
+                return False
+            shutil.rmtree(folder)
+        os.makedirs(folder)
+        return True
+    except Exception as e:
+        print(f"A failure occured during deleting / creation of the folder '{folder}': {e}")
+        return False
+
 def load_geopackages(folder):
     """
     Load geometries for buildings and roads from multiple GeoPackages in a folder.
@@ -63,28 +114,6 @@ def load_geopackages(folder):
         geodata[types[i]] = gdf
     
     return geodata
-
-def emptyFolder(folder):
-    """
-    Deletes the folder, if it exists, and creates a new, empty one.
-
-    Args:
-        folder (string): Path to the new folder
-
-    Returns:
-        bool: True if operation succeeds, False otherwise
-    """
-    try:
-        if os.path.exists(folder):
-            if not os.access(folder, os.W_OK): # Sjekk skrivetilgang
-                print(f"Mangler skrivetilgang til '{folder}'.")
-                return False
-            shutil.rmtree(folder)
-        os.makedirs(folder)
-        return True
-    except Exception as e:
-        print(f"En feil oppsto under sletting/oppretting av mappen '{folder}': {e}")
-        return False
 
 def log_info(logfile, message):
     """

@@ -1,4 +1,4 @@
-# FarSeg_dev/Functionality/pre-processing.py
+# FarSeg_dev/Functionality/preProcessing.py
 
 # Libraries:
 
@@ -7,7 +7,6 @@ import numpy as np
 import os
 import rasterio
 from rasterio.features import geometry_mask
-from rasterio.windows import Window
 import torch
 from torch.utils.data  import Dataset
 
@@ -152,6 +151,7 @@ class preProcessor():
                     filename = os.path.join(self.output, f"tile_{i}_{j}.tif")
                     # Saves the tile:
                     self.save_tile(tile_data, new_transform, metadata, filename)
+        return count_x * count_y
 
     def save_tile(self, tile_data, transform, metadata, filename):
         """

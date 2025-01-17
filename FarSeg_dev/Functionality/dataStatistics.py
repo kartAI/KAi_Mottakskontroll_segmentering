@@ -48,7 +48,7 @@ class statistics():
         Runs the actual statistic function and creates the data.
         """
         # Fetches and generates folders:
-        geotiff_folder = gf.get_valid_input("Where are the folder containing the relevant geotiffs(?): ", gf.doesFolderExists)
+        geotiff_folder = gf.get_valid_input("Where are the folder containing the relevant geotiffs(?): ", gf.doesPathExists)
         tile_folder = gf.get_valid_input("Where should the temporarly tiles be saved(?): ", gf.emptyFolder)
         # Creates statistic:
         statistic = self.createStatistic(geotiff_folder, tile_folder)

@@ -22,9 +22,9 @@ def mainTrain():
     Performs the main part of training a new FarSeg model.
     """
     # Folder with geopackage data (buildings and roads):
-    geopackage_folder = gf.get_valid_input("Where are the geopackages stored(?): ", gf.doesFolderExists)
+    geopackage_folder = gf.get_valid_input("Where are the geopackages stored(?): ", gf.doesPathExists)
     # Folder with a lot of GeoTIFFs:
-    geotiff_folder = gf.get_valid_input("Where are the GeoTIFFs stored(?): ", gf.doesFolderExists)
+    geotiff_folder = gf.get_valid_input("Where are the GeoTIFFs stored(?): ", gf.doesPathExists)
     # New folder to save all the tiles to be generated:
     tile_folder = gf.get_valid_input("Where should the tiles be saved(?): ", gf.emptyFolder)
     # Loads the geopackages:

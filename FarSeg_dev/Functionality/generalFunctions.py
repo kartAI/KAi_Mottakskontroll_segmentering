@@ -22,96 +22,109 @@ def get_valid_input(prompt, validator):
     """
     while True:
         user_input = input(prompt)
-        if validator(user_input):
+        if validator(input=user_input):
             return user_input
         print("Invalid input, try again!")
 
-def yesNo(ans):
+def yesNo(input):
     """
-    Checks if an answer is either yes or no.
+    Checks if an input is either yes or no.
 
     Args:
-        ans (string): Input answer from user.
+        input (string): Input from user.
     
     Returns:
         bool: True for 'yes' or 'y', False for 'no' or 'n', None for invalid input.
     """
-    ans = ans.lower()
-    if ans in ["y", "yes"]:
+    input = input.lower()
+    if input in ["y", "yes"]:
         return True
-    elif ans in ["n", "no"]:
+    elif input in ["n", "no"]:
         return False
     return None  # Return None explicitly for invalid input
 
-def doesPathExists(path):
+def validInput(input, alternatives):
     """
-    Checks if a path exists.
+    Checks if the input is one of the alternatives.
 
     Args:
-        path (string): Path to a folder or a file
+        input (string): Input from user
+        alternatives list[string]: List of possible alternatives
     
     Returns:
-        bool: Wether or not the path exists
+        bool: True for valid input, False otherwise
     """
-    return os.path.exists(path)
+    return input in alternatives
 
-def positiveNumber(text):
+def doesPathExists(input):
+    """
+    Checks if the given user input is a path that exists.
+
+    Args:
+        input (string): Input from the user
+    
+    Returns:
+        bool: Wether or not the input is a path that exists
+    """
+    return os.path.exists(input)
+
+def positiveNumber(input):
     """
     Checks if the input is a positive integer.
 
     Args:
-        text (string): Input from the user
+        input (string): Input from the user
     
     Returns:
         bool: Wether or not the input is a positive integer
     """
-    if text.isdigit():
-        return int(text) > 0
+    if input.isdigit():
+        return int(input) > 0
     return False
 
-def emptyFolder(folder):
+def emptyFolder(input):
     """
-    Deletes the folder, if it exists, and creates a new, empty one.
+    Deletes the folder given as an input string from the user, if it exists, and creates a new, empty one.
 
     Args:
-        folder (string): Path to the new folder
+        input (string): Input path to the new folder given by the user
 
     Returns:
         bool: True if operation succeeds, False otherwise
     """
     try:
-        if os.path.exists(folder):
-            if not os.access(folder, os.W_OK): # Checking writing access
-                print(f"Missing write access to '{folder}'.")
+        if os.path.exists(input):
+            if not os.access(input, os.W_OK): # Checking writing access
+                print(f"Missing write access to '{input}'.")
                 return False
-            shutil.rmtree(folder)
-        os.makedirs(folder, exist_ok=True)
+            shutil.rmtree(input)
+        os.makedirs(input, exist_ok=True)
         return True
     except Exception as e:
-        print(f"An error occurred during deletion/creation of the folder '{folder}': {e}")
+        print(f"An error occurred during deletion/creation of the folder '{input}': {e}")
         return False
 
-def resetFile(file):
+def resetFile(input):
     """
-    Deletesthe file, if it exists, and creates a new , empty one.
+    Deletesthe file given as an input string from the user, if it exists, and creates a new , empty one.
 
     Args:
-        file (string): Path to the new file
+        input (string): Input path to the new file given by the user
     
     Returns:
         bool: True if operation succeeds, False otherwise
     """
     try:
-        if os.path.exists(file):
-            if not os.access(file, os.W_OK):
-                print(f"Missing write access to '{file}'.")
+        if os.path.exists(input):
+            if not os.access(input, os.W_OK):
+                print(f"Missing write access to '{input}'.")
                 return False
-            os.remove(file)
-        with open(file, 'w') as f:
+            os.remove(input)
+        with open(input, 'w') as f:
             pass
         return True
     except Exception as e:
-        print(f"An error occurred during deletion/creation of the file '{file}': {e}")
+        print(f"An error occurred during deletion/creation of the file '{input}': {e}")
 
 def load_geopackages(folder):
     """

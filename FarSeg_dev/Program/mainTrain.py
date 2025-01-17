@@ -14,9 +14,6 @@ from Functionality.validation import tileValidation
 from Functionality.farSegModel import initialize_model
 from Functionality.train import train
 
-
-# TODO: Needs to have: if __name__ == '__main__': !!!
-
 def mainTrain():
     """
     Performs the main part of training a new FarSeg model.

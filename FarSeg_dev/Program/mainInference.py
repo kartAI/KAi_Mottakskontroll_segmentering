@@ -15,9 +15,10 @@ from Functionality.geoTIFFandJPEG import imageSaver
 from Functionality.postProcessing import postProcessor
 from Functionality.preProcessing import preProcessor
 
-# Functions:
-
 def mainInference():
+    """
+    Performs the main part of inference with a trained FarSeg model.
+    """
     # Path to data:
     model_path = gf.get_valid_input("Path to your trained model: ", gf.doesPathExists)
     geotiff_folder = gf.get_valid_input("Path to your folder with orthophotos to be analyzed: ", gf.doesPathExists)

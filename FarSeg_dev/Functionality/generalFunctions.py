@@ -82,14 +82,36 @@ def emptyFolder(folder):
     try:
         if os.path.exists(folder):
             if not os.access(folder, os.W_OK): # Checking writing access
-                print(f"Mangler skrivetilgang til '{folder}'.")
+                print(f"Missing write access to '{folder}'.")
                 return False
             shutil.rmtree(folder)
         os.makedirs(folder, exist_ok=True)
         return True
     except Exception as e:
-        print(f"A failure occured during deleting / creation of the folder '{folder}': {e}")
+        print(f"An error occurred during deletion/creation of the folder '{folder}': {e}")
         return False
+
+def resetFile(file):
+    """
+    Deletesthe file, if it exists, and creates a new , empty one.
+
+    Args:
+        file (string): Path to the new file
+    
+    Returns:
+        bool: True if operation succeeds, False otherwise
+    """
+    try:
+        if os.path.exists(file):
+            if not os.access(file, os.W_OK):
+                print(f"Missing write access to '{file}'.")
+                return False
+            os.remove(file)
+        with open(file, 'w') as f:
+            pass
+        return True
+    except Exception as e:
+        print(f"An error occurred during deletion/creation of the file '{file}': {e}")
 
 def load_geopackages(folder):
     """

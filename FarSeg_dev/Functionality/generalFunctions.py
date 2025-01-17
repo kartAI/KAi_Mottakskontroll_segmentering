@@ -9,37 +9,6 @@ import shutil
 
 # Functions:
 
-def validInput(ans, input):
-    """
-    Checks if the user answer is valid input
-
-    Args:
-        ans (string): input answer from user
-        input (list[string]): valid input
-    Returns:
-        A boolean value
-    """
-    ans = ans.lower()
-    if ans in input:
-        return True
-    else:
-        return False
-
-def yesNo(ans):
-    """
-    Checks if an answer is either yes or no
-    
-    Args:
-        ans (string): input answer from user
-    Returns:
-        A boolean value
-    """
-    ans = ans.lower()
-    if ans.lower() == "y":
-        return True
-    elif ans == "n":
-        return False
-
 def get_valid_input(prompt, validator):
     """
     A general function checking that user input is valid.
@@ -57,17 +26,34 @@ def get_valid_input(prompt, validator):
             return user_input
         print("Invalid input, try again!")
 
-def doesFolderExists(folder):
+def yesNo(ans):
     """
-    Checks if a folder exists.
+    Checks if an answer is either yes or no.
 
     Args:
-        folder (string): Path to the folder
+        ans (string): Input answer from user.
     
     Returns:
-        bool: Wether or not the folder exists
+        bool: True for 'yes' or 'y', False for 'no' or 'n', None for invalid input.
     """
-    return os.path.exists(folder)
+    ans = ans.lower()
+    if ans in ["y", "yes"]:
+        return True
+    elif ans in ["n", "no"]:
+        return False
+    return None  # Return None explicitly for invalid input
+
+def doesPathExists(path):
+    """
+    Checks if a path exists.
+
+    Args:
+        path (string): Path to a folder or a file
+    
+    Returns:
+        bool: Wether or not the path exists
+    """
+    return os.path.exists(path)
 
 def positiveNumber(text):
     """
@@ -99,7 +85,7 @@ def emptyFolder(folder):
                 print(f"Mangler skrivetilgang til '{folder}'.")
                 return False
             shutil.rmtree(folder)
-        os.makedirs(folder)
+        os.makedirs(folder, exist_ok=True)
         return True
     except Exception as e:
         print(f"A failure occured during deleting / creation of the folder '{folder}': {e}")

@@ -111,16 +111,15 @@ class preProcessor():
         self.width = width
         self.height = height
 
-    def generate_tiles(self, geopackage_folder, geotiff):
+    def generate_tiles(self, geotiff):
         """
         Splits a GeoTIFF into tiles and saves it in specified folder.
 
         Args:
-            geopackage_folder (string): Path to folder containing geopackage data
             geotiff (string): Path to the GeoTIFF to split
         """
         gf.emptyFolder(self.output)
-        imageHandler = imageSaver(geopackage_folder)
+        imageHandler = imageSaver()
         data, metadata = imageHandler.readGeoTIFF(geotiff)
         count_x = (metadata["width"] + self.width - 1) // self.width
         count_y = (metadata["height"] + self.height - 1) // self.height

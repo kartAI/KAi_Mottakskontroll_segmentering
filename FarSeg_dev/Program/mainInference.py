@@ -6,7 +6,7 @@ import glob
 import numpy as np
 import os
 import torch
-import torchvision.transform as T
+import torchvision.transforms as T
 from tqdm import tqdm
 
 from Functionality import generalFunctions as gf

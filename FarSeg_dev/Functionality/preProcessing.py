@@ -168,6 +168,9 @@ class preProcessor():
             'width': tile_data.shape[1],
             'transform': transform
         })
+        # Chck for correct order:
+        if tile_data.shape == (1024, 1024, 3):
+            tile_data = np.transpose(tile_data, (2, 0, 1))
         # Write the tile to a new GeoTIFF:
         with rasterio.open(filename, 'w', **profile) as dst:
             dst.write(tile_data)

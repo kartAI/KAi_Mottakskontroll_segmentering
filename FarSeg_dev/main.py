@@ -23,7 +23,7 @@ Here you got four alternatives:
 Just write a number between 1-4 to choose action.
 """)
 
-choice = gf.get_valid_input("Perform (1-4): ", gf.validInput(alternatives=['1', '2', '3', '4']))
+choice = gf.get_valid_input("Perform (1-4): ", gf.positiveNumber)
 
 if choice.isdigit():
     choice = int(choice)

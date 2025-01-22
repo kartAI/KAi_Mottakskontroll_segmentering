@@ -60,6 +60,7 @@ class imageSaver():
                 image_data = ((image_data - image_min) / (image_max - image_min) * 255).astype('uint8')
         
             metadata = src.meta
+            metadata["profile"] = src.profile
 
         return image_data, metadata
 

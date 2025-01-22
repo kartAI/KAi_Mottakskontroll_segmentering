@@ -50,7 +50,7 @@ class tileValidation():
                 tile_box = box(*bounds)
                 # Checks if any buildings or roads overlaps with the tile:
                 for layer in self.geopackages:
-                    if layer.intersects(tile_box).any():
+                    if self.geopackages[layer].intersects(tile_box).any():
                         valid_tiles.append(path)
                         break
         

@@ -4,9 +4,13 @@
 
 import glob
 import os
+import sys
 import torch
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(project_root)
 
 from Functionality import generalFunctions as gf
 from Functionality.preProcessing import MapSegmentationDataset, preProcessor

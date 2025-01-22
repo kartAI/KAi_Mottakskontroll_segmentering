@@ -6,6 +6,9 @@ import os
 import geopandas as gpd
 from shapely.validation import make_valid
 import shutil
+import sys
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__))))
 
 # Functions:
 

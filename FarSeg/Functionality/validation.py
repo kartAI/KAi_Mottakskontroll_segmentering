@@ -50,7 +50,7 @@ class tileValidation():
                 tile_box = box(*bounds)
                 # Checks if any buildings or roads overlaps with the tile:
                 for layer in self.geopackages:
-                    if layer.intersects(tile_box).any():
+                    if self.geopackages[layer].intersects(tile_box).any():
                         valid_tiles.append(path)
                         break
         
@@ -114,6 +114,7 @@ class validation():
                         mIoU_roads += IoU_roads
                         gf.log_info(log_file, f"IoU for roads: {IoU_roads}")
             gf.emptyFolder(mask_folder)
+        gf.log_info(log_file, "\n#############\nTotal results:\n#############\n")
         if count_buildings > 0:
             gf.log_info(log_file, f"mIoU buildings: {mIoU_buildings / count_buildings}")
         if count_roads > 0:

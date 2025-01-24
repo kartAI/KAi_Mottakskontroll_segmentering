@@ -26,17 +26,17 @@ class MapSegmentationDataset(Dataset):
         transform (None, callable): A function or callable object that takes two arguments (image_tensor, label_mask_tensor) and applies transformations. Default is None
     """
 
-    def __init__(self, geotiff, geodata, transform=None):
+    def __init__(self, geotiffs, geodata, transform=None):
         """
         Creates a new instance of MapSegmentationDataset.
 
         Args:
-            geotiff (string): Path to the folder containing geotiffs
-            geodata (string): Path to the folder containing geopackages
+            geotiffs (list[string]): List of path to the GeoTIFFs used for training
+            geodata (dict): Dictionary with 'buildings' and 'roads' as key, refering to geographic data
             transform (None, dict): Optional, any data augmentations or transformations, default None
         """
-        self.geotiff_list = glob.glob(geotiff + '/*.tif')
-        self.geodata = gf.load_geopackages(geodata)
+        self.geotiff_list = geotiffs
+        self.geodata = geodata
         self.transform = transform # Optional: For data augmentations
 
     def __len__(self):
@@ -69,7 +69,7 @@ class MapSegmentationDataset(Dataset):
             masks = {}
             # Combine the masks into a single-channel label (0: background, 1: buildings, 2: roads):
             label_mask = np.zeros(out_shape, dtype=np.uint8) # Initialize background as class 0
-            for objtype, val in enumerate(self.geodata):
+            for val, objtype in enumerate(self.geodata):
                 # Reproject geometries to math the CRS of the current GeoTIFF:
                 geometries[objtype] = self.geodata[objtype].to_crs(src.crs)['geometry'].values
                 # Rasterize the geometries for each class:
@@ -168,6 +168,9 @@ class preProcessor():
             'width': tile_data.shape[1],
             'transform': transform
         })
+        # Chck for correct order:
+        if tile_data.shape == (1024, 1024, 3):
+            tile_data = np.transpose(tile_data, (2, 0, 1))
         # Write the tile to a new GeoTIFF:
         with rasterio.open(filename, 'w', **profile) as dst:
             dst.write(tile_data)

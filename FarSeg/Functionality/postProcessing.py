@@ -80,7 +80,7 @@ class postProcessor():
                     row * tile_height : (row + 1) * tile_height,
                     col * tile_width  : (col + 1) * tile_width,
                     band
-                ] = image_data[band]
+                ] = image_data[:, :, band]
             # Merge segmented image by fetching data:
             image_data, metadata = imageHandler.readGeoTIFF(os.path.join(self.segmented_folder, segmented_file))
             for band in range(3):
@@ -88,7 +88,7 @@ class postProcessor():
                     row * tile_height : (row + 1) * tile_height,
                     col * tile_width  : (col + 1) * tile_width,
                     band
-                ] = image_data[band]
+                ] = image_data[:, :, band]
         # Save the merged original image as GeoTIFF:
         imageHandler.createGeoTIFF(original, profile, full_original_image)
         # Save the merged segmented image as GeoTIFF:

@@ -5,9 +5,13 @@
 import glob
 import numpy as np
 import os
+import sys
 import torch
-import torchvision.transform as T
+import torchvision.transforms as T
 from tqdm import tqdm
+
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(project_root)
 
 from Functionality import generalFunctions as gf
 from Functionality.farSegModel import initialize_model

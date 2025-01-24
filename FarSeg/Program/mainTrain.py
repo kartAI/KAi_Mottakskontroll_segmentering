@@ -4,9 +4,13 @@
 
 import glob
 import os
+import sys
 import torch
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(project_root)
 
 from Functionality import generalFunctions as gf
 from Functionality.preProcessing import MapSegmentationDataset, preProcessor
@@ -36,13 +40,16 @@ def mainTrain():
     # Initializes the pre-processing element:
     pre_processing = preProcessor(0.7, tile_folder)
     # Values to use in the training:
-    batches = gf.get_valid_input("Number of batches: ", gf.positiveNumber)
-    epochs = gf.get_valid_input("Number of epochs: ", gf.positiveNumber)
-    num_workers = gf.get_valid_input("Number of workers to use: ", gf.positiveNumber)
+    batches = int(gf.get_valid_input("Number of batches: ", gf.positiveNumber))
+    epochs = int(gf.get_valid_input("Number of epochs: ", gf.positiveNumber))
+    num_workers = int(gf.get_valid_input("Number of workers to use: ", gf.positiveNumber))
+    # Give a name for the trained model:
+    model_path = gf.get_valid_input("Where will you save the model(?): ", gf.emptyFolder)
+    model_name = input("Give the model a name (ends with '.pth'): ")
     # Loops through each GeoTIFF file:
     for tif in tqdm(tif_files, 'GeoTIFF files'):
         # Step 1: Generate tile for the current GeoTIFF
-        pre_processing.generate_tiles(geopackage_folder, tif)
+        pre_processing.generate_tiles(tif)
         valid_tiles = tileContainer.validate(tile_folder)
         if len(valid_tiles) == 0:
             continue
@@ -64,6 +71,4 @@ def mainTrain():
         gf.emptyFolder(tile_folder)
         torch.cuda.empty_cache()
     # Save the model after training:
-    model_path = gf.get_valid_input("Where will you save the model(?): ", gf.emptyFolder)
-    model_name = input("Give the model a name (ends with '.pth'): ")
     torch.save(model.state_dict(), os.path.join(model_path, model_name))

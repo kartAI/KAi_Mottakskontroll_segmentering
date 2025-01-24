@@ -91,7 +91,7 @@ class statistics():
         for tif in tqdm(geotiffs, "GeoTIFF files"):
             gf.emptyFolder(tile_folder)
             tileGenerator = preProcessor(0.7, tile_folder)
-            self.total_tiles += tileGenerator.generate_tiles(self.geopackages, tif)
+            self.total_tiles += tileGenerator.generate_tiles(tif)
             valid_tiles_list = glob.glob(tile_folder + '/*.tif')
             self.valid_tiles += len(valid_tiles_list)
             # Analyzes valid tiles:

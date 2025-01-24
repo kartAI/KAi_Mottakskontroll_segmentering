@@ -6,6 +6,9 @@ import os
 import geopandas as gpd
 from shapely.validation import make_valid
 import shutil
+import sys
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__))))
 
 # Functions:
 
@@ -22,7 +25,7 @@ def get_valid_input(prompt, validator):
     """
     while True:
         user_input = input(prompt)
-        if validator(input=user_input):
+        if validator(user_input):
             return user_input
         print("Invalid input, try again!")
 
@@ -42,19 +45,6 @@ def yesNo(input):
     elif input in ["n", "no"]:
         return False
     return None  # Return None explicitly for invalid input
-
-def validInput(input, alternatives):
-    """
-    Checks if the input is one of the alternatives.
-
-    Args:
-        input (string): Input from user
-        alternatives list[string]: List of possible alternatives
-    
-    Returns:
-        bool: True for valid input, False otherwise
-    """
-    return input in alternatives
 
 def doesPathExists(input):
     """
@@ -159,4 +149,4 @@ def log_info(logfile, message):
         message (string): Text that should be written
     """
     with open(logfile, 'a') as f:
-        f.write(message + '/n')
+        f.write(message + '\n')

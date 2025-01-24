@@ -22,7 +22,7 @@ Klon prosjektet og generer et nytt virtuelt miljø i kodebasen. For å komme i g
 
 Først må en laste ned hovedbibliotekene til PyTorch fra deres nettside (https://pytorch.org/). Koden generert i dette prosjektet bruker torch 2.5.1 med kompabilitet for NVIDIA sin CUDA 12.0 GPU. For å få inn riktig torch-bibliotek brukt i denne koden, kjør:
 
-pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 
 Når dette er gjort kan resten av pakkene lastes ned ved å kjøre:
 

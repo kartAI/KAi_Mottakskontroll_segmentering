@@ -3,6 +3,7 @@
 # Libraries:
 
 import os
+import shutil
 import sys
 
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -21,3 +22,5 @@ def mainValidation():
     log_file = gf.get_valid_input("Write the path of the log file that will contain the results: ", gf.resetFile)
     validator = validation(result_folder, geopackage_folder)
     validator.validate(mask_folder, log_file)
+    if os.path.exists(mask_folder):
+        shutil.rmtree(mask_folder)

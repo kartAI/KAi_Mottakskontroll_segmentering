@@ -4,6 +4,7 @@
 
 import glob
 import os
+import shutil
 import sys
 import torch
 from torch.utils.data import DataLoader
@@ -70,5 +71,8 @@ def mainTrain():
         # Step 5: Clear tiles in the folder to prepare for next GeoTIFF
         gf.emptyFolder(tile_folder)
         torch.cuda.empty_cache()
+    # Removes the tile_folder after training:
+    if os.path.exists(tile_folder):
+        shutil.rmtree(tile_folder)
     # Save the model after training:
     torch.save(model.state_dict(), os.path.join(model_path, model_name))

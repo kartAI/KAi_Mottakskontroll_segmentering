@@ -5,8 +5,10 @@
 from collections import Counter
 import glob
 import matplotlib.pyplot as plt
+import os
 import rasterio
 from shapely.geometry import box
+import shutil
 from tqdm import tqdm
 
 import generalFunctions as gf
@@ -52,6 +54,9 @@ class statistics():
         tile_folder = gf.get_valid_input("Where should the temporarly tiles be saved(?): ", gf.emptyFolder)
         # Creates statistic:
         statistic = self.createStatistic(geotiff_folder, tile_folder)
+        # Reoves the tile_folder:
+        if os.path.exists(tile_folder):
+            shutil.rmtree(tile_folder)
         # Prints the statistics:
         for key, value in statistic.items():
             print(f"{key}: {value}")

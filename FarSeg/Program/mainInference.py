@@ -5,6 +5,7 @@
 import glob
 import numpy as np
 import os
+import shutil
 import sys
 import torch
 import torchvision.transforms as T
@@ -97,3 +98,7 @@ def mainInference():
         # Step 9: Prepare for next GeoTIFF by removing all the generated tiles
         gf.emptyFolder(tile_folder)
         gf.emptyFolder(segmented_folder)
+    if os.path.exists(tile_folder):
+        shutil.rmtree(tile_folder)
+    if os.path.exists(segmented_folder):
+        shutil.rmtree(segmented_folder)

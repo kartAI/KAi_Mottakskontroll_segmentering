@@ -32,7 +32,6 @@ def mainTrain():
     geopackages = gf.load_geopackages(geopackage_folder) # [Buildings, roads]
     # All GeoTIFF files in the training folder:
     tif_files = glob.glob(geotiff_folder + '/*.tif')
-    tif_files = tif_files[:20]
     # Validation element:
     tileContainer = tileValidation(geopackage_folder)
     # Initialize model, loss function and optimizer:

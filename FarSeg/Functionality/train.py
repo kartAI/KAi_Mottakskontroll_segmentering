@@ -1,4 +1,4 @@
-# FarSeg_dev/Functionality/train.py
+# FarSeg/Functionality/train.py
 
 # Libraries:
 
@@ -9,7 +9,7 @@ from farSegModel import EarlyStopping
 
 # Functions:
 
-def train(model, train_loader, val_loader, criterion, optimizer, num_epochs):
+def train(model, train_loader, val_loader, criterion, optimizer, num_epochs, patience=5, min_delta=0.01, output=False):
     """
     Training loop for FarSeg segmentation model.
 
@@ -20,12 +20,19 @@ def train(model, train_loader, val_loader, criterion, optimizer, num_epochs):
         criterion (torch.nn.CrossEntropyLoss): The loss function used for training, suitable for multi-class classification tasks
         optimizer (torch.optim.Adam): The optimizer for updating the model parameters during training, configured with the specified learning rate
         num_epochs (int): Number of epochs to consider
+        patience (int): Integer initializing the patience of the earlyStop instance, default 5
+        min_delta (float): Float initializing the minimum improvement of the earlyStop instance, default 0.01
+        output (bool): Wether or not the function should return a value, default False
+    
+    Returns:
+        if output:
+            int: Integer describing the best validation score of the model before stopping training
     """
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     model = model.to(device)
     criterion = criterion.to(device)
     scaler = torch.amp.GradScaler()
-    early_stopping = EarlyStopping(patience=5, min_delta=0.01)
+    early_stopping = EarlyStopping(patience=patience, min_delta=min_delta)
     for epoch in tqdm(range(num_epochs), desc='Epochs'):
         if early_stopping.early_stop:
             break
@@ -52,16 +59,13 @@ def train(model, train_loader, val_loader, criterion, optimizer, num_epochs):
             scaler.step(optimizer)
             scaler.update()
             epoch_loss += loss.item()
-            # if batch_idx % 10 == 0:
-            # print(f"Batch [{batch_idx}/{len(train_loader)}], Loss: {loss.item()}")
             # Clear CUDA cache to prevent memory buildup:
             torch.cuda.empty_cache()
-        # Print average loss for the epoch:
-        avg_epoch_loss = epoch_loss / len(train_loader)
-        # print(f'Epoch [{epoch + 1}/{num_epochs}], Average Loss: {avg_epoch_loss:.4f}')
         # Validate at the end of each epoch
         validate(model, val_loader, criterion, device, early_stopping)
         torch.cuda.empty_cache()
+    if output:
+        return early_stopping.best_score
 
 def validate(model, val_loader, criterion, device, early_stopp):
     """
@@ -89,6 +93,5 @@ def validate(model, val_loader, criterion, device, early_stopp):
                 # Calculate loss:
                 loss = criterion(outputs, masks)
             val_loss += loss.item()
-    early_stopp(val_loss)
     avg_val_loss = val_loss / len(val_loader)
-    # print(f'Validation loss: {avg_val_loss:.4f}')
+    early_stopp(avg_val_loss)

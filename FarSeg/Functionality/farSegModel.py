@@ -1,4 +1,4 @@
-# FarSeg_dev/Functionality/farSegModel.py
+# FarSeg/Functionality/farSegModel.py
 
 # Libraries:
 
@@ -21,7 +21,7 @@ class EarlyStopping():
         early_stop (bool): Wether or not to stop early
     """
 
-    def __init__(self, patience=5, min_delta=0):
+    def __init__(self, patience, min_delta):
         """
         Creates a new instance of EarlyStopping.
 

@@ -1,4 +1,4 @@
-# FarSeg_dev/Program/mainTrain.py
+# FarSeg/Program/mainTrain.py
 
 # Libraries:
 

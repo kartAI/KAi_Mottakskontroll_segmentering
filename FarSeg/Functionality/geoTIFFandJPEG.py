@@ -1,4 +1,4 @@
-# FarSeg_dev/Functionality/geoTIFFandJPEG.py
+# FarSeg/Functionality/geoTIFFandJPEG.py
 
 # Libraries:
 
@@ -73,7 +73,7 @@ class imageSaver():
         Args:
             tif (string): File path to the GeoTIFF
             output (string): File path to the output folder
-            mask (None, ndarray): The rgb mask saved in a ndarray, default None
+            mask (ndarray): The rgb mask saved in a ndarray, default None
             original (bool): A boolean telling what to be saved, default True
         """
         image_data, metadata = self.readGeoTIFF(tif)
@@ -104,7 +104,7 @@ class imageSaver():
         Args:
             tif (string): File path to the GeoTIFF
             output (string): File path to the output folder
-            mask (None, ndarray): The rgb mask saved in a ndarray, default None
+            mask (ndarray): The rgb mask saved in a ndarray, default None
             original (bool): A boolean telling what to be saved, default True
         """
         if original:

@@ -1,4 +1,4 @@
-# FarSeg_dev/Program/mainInference.py
+# FarSeg/Program/mainInference.py
 
 # Libraries:
 

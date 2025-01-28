@@ -1,4 +1,4 @@
-# FarSeg_dev/Functionality/preProcessing.py
+# FarSeg/Functionality/preProcessing.py
 
 # Libraries:
 
@@ -33,7 +33,7 @@ class MapSegmentationDataset(Dataset):
         Args:
             geotiffs (list[string]): List of path to the GeoTIFFs used for training
             geodata (dict): Dictionary with 'buildings' and 'roads' as key, refering to geographic data
-            transform (None, dict): Optional, any data augmentations or transformations, default None
+            transform (dict): Optional, any data augmentations or transformations, default None
         """
         self.geotiff_list = geotiffs
         self.geodata = geodata
@@ -111,14 +111,20 @@ class preProcessor():
         self.width = width
         self.height = height
 
-    def generate_tiles(self, geotiff):
+    def generate_tiles(self, geotiff, remove=True, count=False):
         """
         Splits a GeoTIFF into tiles and saves it in specified folder.
 
         Args:
             geotiff (string): Path to the GeoTIFF to split
+            remove (bool): Telling if the tile folder should be emptied before new ones are generated, default True
+            count (int): Integer used for file names of saved tiles, default False
+
+        Returns:
+            int: Number of generated tiles (tiles_x-direction * tiles_y-direction)
         """
-        gf.emptyFolder(self.output)
+        if remove:
+            gf.emptyFolder(self.output)
         imageHandler = imageSaver()
         data, metadata = imageHandler.readGeoTIFF(geotiff)
         count_x = (metadata["width"] + self.width - 1) // self.width
@@ -147,7 +153,10 @@ class preProcessor():
                 # Checks if the tile contains any valid data:
                 if tile_contains_valid_data(tile_data, metadata.get("nodata", 0)):
                     # Defines output filename:
-                    filename = os.path.join(self.output, f"tile_{i}_{j}.tif")
+                    if not count:
+                        filename = os.path.join(self.output, f"tile_{i}_{j}.tif")
+                    else:
+                        filename = os.path.join(self.output, f"tile_{count}_{i}_{j}.tif")
                     # Saves the tile:
                     self.save_tile(tile_data, new_transform, metadata, filename)
         return count_x * count_y
@@ -180,8 +189,8 @@ class preProcessor():
         Splits the GeoTIFFs from the folder in training and validation sets.
 
         Args:
-            folder (string): Path to the folder containing the GeoTIFFs, default = None
-            liste (list[string]): List of GeoTIFF paths, default = None
+            folder (string): Path to the folder containing the GeoTIFFs, default None
+            liste (list[string]): List of GeoTIFF paths, default None
         
         Returns:
             list[string]: Lists of file paths, training and validation sets

@@ -1,4 +1,4 @@
-# FarSeg_dev/Functionality/generalFunctions.py
+# FarSeg/Functionality/generalFunctions.py
 
 # Libraries:
 

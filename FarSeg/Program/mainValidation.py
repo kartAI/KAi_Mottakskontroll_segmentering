@@ -1,4 +1,4 @@
-# FarSeg_dev/Program/mainValidation.py
+# FarSeg/Program/mainValidation.py
 
 # Libraries:
 

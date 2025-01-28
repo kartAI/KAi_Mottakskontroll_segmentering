@@ -1,4 +1,4 @@
-# FarSeg_dev/Functionality/postProcessing.py
+# FarSeg/Functionality/postProcessing.py
 
 # Libraries:
 
@@ -38,7 +38,7 @@ class postProcessor():
         Args:
             original (string): File path and name of the merged, original output file (aerial image) as .tif file
             segmented (string): File path and name of the merged, segmented output file (segmented image) as .tif file
-            jpeg (bool): Boolean value telling wether or not to save image as JPEG as well as GeoTIFF
+            jpeg (bool): Boolean value telling wether or not to save image as JPEG as well as GeoTIFF, default False
         
         Note:
             The tif_folder and segmented_folder must contain the same number of files

@@ -49,9 +49,10 @@ class statistics():
         """
         Runs the actual statistic function and creates the data.
         """
-        # Fetches and generates folders:
+        # Fetches and generates folders and files:
         geotiff_folder = gf.get_valid_input("Where are the folder containing the relevant geotiffs(?): ", gf.doesPathExists)
         tile_folder = gf.get_valid_input("Where should the temporarly tiles be saved(?): ", gf.emptyFolder)
+        log_file = gf.get_valid_input("Write the path of the log file that will contain the results: ", gf.resetFile)
         # Creates statistic:
         statistic = self.createStatistic(geotiff_folder, tile_folder)
         # Reoves the tile_folder:
@@ -59,7 +60,7 @@ class statistics():
             shutil.rmtree(tile_folder)
         # Prints the statistics:
         for key, value in statistic.items():
-            print(f"{key}: {value}")
+            gf.log_info(log_file, f"{key}: {value}")
         # Plots data:
         buildings, roads = statistic["Building_distribution"], statistic["Road_distribution"]
         # Buildings

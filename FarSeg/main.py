@@ -1,4 +1,4 @@
-# FarSeg_dev/main.py
+# FarSeg/main.py
 
 # Libraries:
 

@@ -1,4 +1,4 @@
-# FarSeg_dev/Functionality/validation.py
+# FarSeg/Functionality/validation.py
 
 # Libraries:
 

@@ -7,6 +7,7 @@ import numpy as np
 import os
 import rasterio
 from shapely.geometry import box
+from tqdm import tqdm
 
 import generalFunctions as gf
 from geoTIFFandJPEG import imageSaver
@@ -43,7 +44,7 @@ class tileValidation():
         tile_paths = [os.path.join(tile_folder, f) for f in os.listdir(tile_folder) if f.endswith('.tif')]
         valid_tiles = []
 
-        for path in tile_paths:
+        for path in tqdm(tile_paths, desc="Validated tiles"):
             with rasterio.open(path) as tile:
                 # Fetches the bounding box of the tile in coordinates:
                 bounds = tile.bounds

@@ -28,7 +28,7 @@ def train(model, train_loader, val_loader, criterion, optimizer, num_epochs, pat
         if output:
             int: Integer describing the best validation score of the model before stopping training
     """
-    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = model.to(device)
     criterion = criterion.to(device)
     scaler = torch.amp.GradScaler()
@@ -46,7 +46,7 @@ def train(model, train_loader, val_loader, criterion, optimizer, num_epochs, pat
                 masks = masks.squeeze(1) # Remove the channel dimension if it exists
             # Convert masks to LongTensor for the loss function
             masks = masks.long()
-            with torch.amp.autocast(device_type='cuda:0', dtype=torch.float16):
+            with torch.amp.autocast(device_type='cuda', dtype=torch.bfloat16):
                 outputs = model(images) # Forward pass
                 # output shapes: (batch_size, num_classes, height, width)
                 # mask shapes: (batch_size, height, width), with class indices: (0: background, 1: buildings, etc.)
@@ -60,7 +60,9 @@ def train(model, train_loader, val_loader, criterion, optimizer, num_epochs, pat
             scaler.update()
             epoch_loss += loss.item()
             # Clear CUDA cache to prevent memory buildup:
+            del images, masks, outputs, loss
             torch.cuda.empty_cache()
+            torch.cuda.synchronize()
         # Validate at the end of each epoch
         validate(model, val_loader, criterion, device, early_stopping)
         torch.cuda.empty_cache()
@@ -93,5 +95,9 @@ def validate(model, val_loader, criterion, device, early_stopp):
                 # Calculate loss:
                 loss = criterion(outputs, masks)
             val_loss += loss.item()
+            # Clear CUDA cache to prevent memory buildup:
+            del images, masks, outputs, loss
+            torch.cuda.empty_cache()
+            torch.cuda.synchronize()
     avg_val_loss = val_loss / len(val_loader)
     early_stopp(avg_val_loss)

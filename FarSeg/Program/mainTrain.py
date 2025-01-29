@@ -123,6 +123,7 @@ def mainTrain2():
     for tile in tqdm(glob.glob(tile_folder + "\\*.tif"), desc="Removed GeoTIFFs"):
         if tile not in valid_set:
             os.remove(tile)
+    del valid_set
     for i in range(4):
         tiles = valid_tiles[int(len(valid_tiles)/4)*i : int(len(valid_tiles)/4)*(i+1)]
         # Step 2: Split tiles into train and validation
@@ -138,6 +139,7 @@ def mainTrain2():
         val_loader = DataLoader(val_dataset, batch_size=batches, shuffle=False, num_workers=num_workers) #, pin_memory=True)
         # Step 4: Train the modelon this batch of tiles
         train(model, train_loader, val_loader, criterion, optimizer, num_epochs=epochs, patience=patience, min_delta=min_improvement)
+        del train_dataset, val_dataset, train_loader, val_loader
     # Step 5: Removes the tile_folder after training
     if os.path.exists(tile_folder):
         shutil.rmtree(tile_folder)

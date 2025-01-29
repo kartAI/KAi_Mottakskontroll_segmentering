@@ -34,9 +34,7 @@ def train(model, train_loader, val_loader, criterion, optimizer, num_epochs, pat
     scaler = torch.amp.GradScaler()
     early_stopping = EarlyStopping(patience=patience, min_delta=min_delta)
     for epoch in tqdm(range(num_epochs), desc='Epochs'):
-        if early_stopping.early_stop:
-            break
-        epoch_loss = 0
+        #epoch_loss = 0
         model.train()
         for batch_idx, (images, masks) in enumerate(train_loader, 1):
             images, masks = images.to(device), masks.to(device)
@@ -58,7 +56,7 @@ def train(model, train_loader, val_loader, criterion, optimizer, num_epochs, pat
             scaled_loss.backward()
             scaler.step(optimizer)
             scaler.update()
-            epoch_loss += loss.item()
+            #epoch_loss += loss.item()
             # Clear CUDA cache to prevent memory buildup:
             del images, masks, outputs, loss
             torch.cuda.empty_cache()
@@ -66,6 +64,8 @@ def train(model, train_loader, val_loader, criterion, optimizer, num_epochs, pat
         # Validate at the end of each epoch
         validate(model, val_loader, criterion, device, early_stopping)
         torch.cuda.empty_cache()
+        if early_stopping.early_stop:
+            break
     if output:
         return early_stopping.best_score
 

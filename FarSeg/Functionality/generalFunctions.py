@@ -68,9 +68,10 @@ def positiveNumber(input):
     Returns:
         bool: Wether or not the input is a positive integer
     """
-    if input.isdigit():
-        return int(input) > 0
-    return False
+    try:
+        return float(input) > 0
+    except:
+        return False
 
 def emptyFolder(input):
     """

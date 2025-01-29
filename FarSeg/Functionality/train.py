@@ -9,7 +9,7 @@ from farSegModel import EarlyStopping
 
 # Functions:
 
-def train(model, train_loader, val_loader, criterion, optimizer, num_epochs, patience=5, min_delta=0.01, output=False):
+def train(model, train_loader, val_loader, criterion, optimizer, num_epochs, patience, min_delta, output=False):
     """
     Training loop for FarSeg segmentation model.
 

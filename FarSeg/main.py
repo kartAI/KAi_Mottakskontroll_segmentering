@@ -5,7 +5,7 @@
 from Functionality import generalFunctions as gf
 from Functionality.dataStatistics import statistics
 from Program.mainInference import mainInference
-from Program.mainTrain import mainTrain
+from Program.mainTrain import mainTrain, mainTrain2
 from Program.mainValidation import mainValidation
 
 # Main program:
@@ -29,7 +29,8 @@ if __name__ == '__main__':
     if choice.isdigit():
         choice = int(choice)
         if choice == 1:
-                mainTrain()
+            #mainTrain()
+            mainTrain2()
         elif choice == 2:
             mainInference()
         elif choice == 3:

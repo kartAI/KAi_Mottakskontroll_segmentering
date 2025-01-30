@@ -96,7 +96,7 @@ class validation():
         
         imageHandler = imageSaver(self.geopackages)
 
-        for i in range(len(self.originals)):
+        for i in tqdm(range(len(self.originals)), desc="Images"):
             gf.log_info(log_file, f"Image set: {i + 1}")
             if check_geographic_overlap(self.originals[i], self.segmentations[i]):
                 imageHandler.createMaskGeoTIFF(self.originals[i], mask_folder)

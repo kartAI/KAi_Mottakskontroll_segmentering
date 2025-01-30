@@ -9,7 +9,7 @@ from farSegModel import EarlyStopping
 
 # Functions:
 
-def train(model, train_loader, val_loader, criterion, optimizer, num_epochs, patience, min_delta, output=False):
+def train(model, train_loader, val_loader, criterion, optimizer, num_epochs, patience, min_delta, save_path=None, output=False):
     """
     Training loop for FarSeg segmentation model.
 
@@ -22,6 +22,7 @@ def train(model, train_loader, val_loader, criterion, optimizer, num_epochs, pat
         num_epochs (int): Number of epochs to consider
         patience (int): Integer initializing the patience of the earlyStop instance, default 5
         min_delta (float): Float initializing the minimum improvement of the earlyStop instance, default 0.01
+        save_path (string): Path to save the best model weights, default None
         output (bool): Wether or not the function should return a value, default False
     
     Returns:
@@ -32,9 +33,9 @@ def train(model, train_loader, val_loader, criterion, optimizer, num_epochs, pat
     model = model.to(device)
     criterion = criterion.to(device)
     scaler = torch.amp.GradScaler()
-    early_stopping = EarlyStopping(patience=patience, min_delta=min_delta)
-    for epoch in tqdm(range(num_epochs), desc='Epochs'):
-        #epoch_loss = 0
+    early_stopping = EarlyStopping(patience=patience, min_delta=min_delta, save_path=save_path, model=model)
+    for _ in tqdm(range(num_epochs), desc='Epochs'):
+        epoch_loss = 0
         model.train()
         for batch_idx, (images, masks) in enumerate(train_loader, 1):
             images, masks = images.to(device), masks.to(device)
@@ -56,13 +57,15 @@ def train(model, train_loader, val_loader, criterion, optimizer, num_epochs, pat
             scaled_loss.backward()
             scaler.step(optimizer)
             scaler.update()
-            #epoch_loss += loss.item()
+            epoch_loss += loss.item()
             # Clear CUDA cache to prevent memory buildup:
             del images, masks, outputs, loss
             torch.cuda.empty_cache()
             torch.cuda.synchronize()
         # Validate at the end of each epoch
-        validate(model, val_loader, criterion, device, early_stopping)
+        avg_train_loss = epoch_loss / len(train_loader)
+        avg_val_loss = validate(model, val_loader, criterion, device, early_stopping)
+        early_stopping(avg_val_loss, avg_train_loss)
         torch.cuda.empty_cache()
         if early_stopping.early_stop:
             break
@@ -100,4 +103,4 @@ def validate(model, val_loader, criterion, device, early_stopp):
             torch.cuda.empty_cache()
             torch.cuda.synchronize()
     avg_val_loss = val_loss / len(val_loader)
-    early_stopp(avg_val_loss)
+    return avg_val_loss

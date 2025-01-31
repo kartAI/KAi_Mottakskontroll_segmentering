@@ -29,7 +29,7 @@ if __name__ == '__main__':
     if choice.isdigit():
         choice = int(choice)
         if choice == 1:
-                mainTrain()
+            mainTrain()
         elif choice == 2:
             mainInference()
         elif choice == 3:

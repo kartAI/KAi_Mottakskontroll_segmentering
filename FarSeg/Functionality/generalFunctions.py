@@ -12,7 +12,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__))))
 
 # Functions:
 
-def get_valid_input(prompt, validator):
+def get_valid_input(prompt, validator, default=None):
     """
     A general function checking that user input is valid.
 
@@ -25,6 +25,8 @@ def get_valid_input(prompt, validator):
     """
     while True:
         user_input = input(prompt)
+        if user_input == "" and default != None:
+            return default
         if validator(user_input):
             return user_input
         print("Invalid input, try again!")
@@ -68,9 +70,10 @@ def positiveNumber(input):
     Returns:
         bool: Wether or not the input is a positive integer
     """
-    if input.isdigit():
-        return int(input) > 0
-    return False
+    try:
+        return float(input) > 0
+    except:
+        return False
 
 def emptyFolder(input):
     """

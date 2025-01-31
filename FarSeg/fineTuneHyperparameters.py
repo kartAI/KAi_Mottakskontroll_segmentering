@@ -94,11 +94,11 @@ def grid_search_training(hyperparameter_grid, geotiffs, geopackages, tile_folder
 if __name__ == '__main__':
     # Defines the hyperparameter grid
     hyperparameter_grid = {
-        'lr': [1e-3, 1e-4, 1e-5],
-        'batch_size': [16, 32, 64],
-        'epochs': [10, 30],
-        'patience': [3, 5],
-        'min_improvement': [0.1, 0.01, 0.001]
+        'lr': [1e-3],
+        'batch_size': [16],
+        'epochs': [1],
+        'patience': [3],
+        'min_improvement': [0.1]
     }
 
     geopackages = 'C:/Jakob_Marianne_2024_2025/Geopackage_Farsund/Flater'

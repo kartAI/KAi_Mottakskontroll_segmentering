@@ -7,6 +7,7 @@ import numpy as np
 import os
 import rasterio
 from shapely.geometry import box
+from tqdm import tqdm
 
 import generalFunctions as gf
 from geoTIFFandJPEG import imageSaver
@@ -43,7 +44,7 @@ class tileValidation():
         tile_paths = [os.path.join(tile_folder, f) for f in os.listdir(tile_folder) if f.endswith('.tif')]
         valid_tiles = []
 
-        for path in tile_paths:
+        for path in tqdm(tile_paths, desc="Validated tiles"):
             with rasterio.open(path) as tile:
                 # Fetches the bounding box of the tile in coordinates:
                 bounds = tile.bounds
@@ -95,7 +96,7 @@ class validation():
         
         imageHandler = imageSaver(self.geopackages)
 
-        for i in range(len(self.originals)):
+        for i in tqdm(range(len(self.originals)), desc="Images"):
             gf.log_info(log_file, f"Image set: {i + 1}")
             if check_geographic_overlap(self.originals[i], self.segmentations[i]):
                 imageHandler.createMaskGeoTIFF(self.originals[i], mask_folder)

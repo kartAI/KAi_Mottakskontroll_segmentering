@@ -3,6 +3,7 @@
 # Libraries:
 
 import torch
+from torchmetrics import JaccardIndex
 from tqdm import tqdm
 
 from farSegModel import EarlyStopping
@@ -64,15 +65,17 @@ def train(model, train_loader, val_loader, criterion, optimizer, num_epochs, pat
             torch.cuda.synchronize()
         # Validate at the end of each epoch
         avg_train_loss = epoch_loss / len(train_loader)
-        avg_val_loss = validate(model, val_loader, criterion, device, early_stopping)
+        avg_val_loss, avg_iou = validate(model, val_loader, criterion, device)
         early_stopping(avg_val_loss, avg_train_loss)
         torch.cuda.empty_cache()
+        if avg_iou > 0.85:
+            early_stopping.early_stop = True
         if early_stopping.early_stop:
             break
     if output:
         return early_stopping.best_score
 
-def validate(model, val_loader, criterion, device, early_stopp):
+def validate(model, val_loader, criterion, device):
     """
     Validation loop during training of FarSeg segmentation model.
 
@@ -81,10 +84,10 @@ def validate(model, val_loader, criterion, device, early_stopp):
         val_loader (DataLoader): The data used to validate the model
         criterion (torch.nn.CrossEntropyLoss): The loss function used for training, suitable for multi-class classification tasks
         device (torch.device): Device (GPU / CPU) that performs the calculations during training and validation
-        early_stopp (EarlyStopping): EarlyStopping object that ensures that the model do not overfit
     """
     model.eval()
     val_loss = 0
+    iou_metric = JaccardIndex(task="multiclass", num_classes=3).to(device=device)
     with torch.no_grad():
         for images, masks in val_loader:
             images, masks = images.to(device), masks.to(device)
@@ -98,9 +101,14 @@ def validate(model, val_loader, criterion, device, early_stopp):
                 # Calculate loss:
                 loss = criterion(outputs, masks)
             val_loss += loss.item()
+            # IoU-preditions:
+            preds = torch.argmax(outputs, dim=1)
+            iou_metric.update(preds, masks)
             # Clear CUDA cache to prevent memory buildup:
             del images, masks, outputs, loss
             torch.cuda.empty_cache()
             torch.cuda.synchronize()
     avg_val_loss = val_loss / len(val_loader)
-    return avg_val_loss
+    avg_iou = iou_metric.compute()
+    iou_metric.reset()
+    return avg_val_loss, avg_iou.item()

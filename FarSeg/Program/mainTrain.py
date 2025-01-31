@@ -74,7 +74,7 @@ def mainTrain():
         loss = train(model, train_loader, val_loader, criterion, optimizer, num_epochs=epochs, patience=patience, min_delta=min_improvement, save_path=os.path.join(model_path, model_name), output=True)
         geotiffCounter(loss)
         # Step 5: Clear tiles in the folder to prepare for next GeoTIFF
-        del train_dataset, val_dataset, train_loader, val_loader
+        del train_dataset, val_dataset, train_loader, val_loader, loss
         gf.emptyFolder(tile_folder)
         torch.cuda.empty_cache()
         torch.save(model.state_dict(), os.path.join(model_path, model_name))

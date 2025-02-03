@@ -2,6 +2,7 @@
 
 # Libraries:
 
+from collections import deque
 import numpy as np
 import torch
 import torch.nn as nn
@@ -89,20 +90,25 @@ class geotiffStopping():
     Attributes:
         patience (int): Number of epochs to wait before stopping early
         min_delta (float): Minimum improvement in the monitored metric required to continue
+        window_size (int): Number of GeoTIFFs to consider in the early stop process, default 5
+        loss_hitory (deque): Deque object collecting the last [window_size] losses
         counter (int): Number of epochs waited
         best_score (float): The best achieved score by the model so far, starts like None
         early_stop (bool): Wether or not to stop early
     """
-    def __init__(self, patience, min_delta):
+    def __init__(self, patience, min_delta, window_size=5):
         """
         Creates a new instance of geotiffStopping.
 
         Args:
             patience (int): Number of epochs to wait before stopping early
             min_delta (flaot): Minimum improvement in the monitored metric required to continue
+            window_size (int): Number of GeoTIFFs to consider in the early stop process, default 5
         """
         self.patience = patience
         self.min_delta = min_delta
+        self.window_size = window_size
+        self.loss_history = deque(maxlen=window_size)
 
         self.counter = 0
         self.best_score = None
@@ -120,15 +126,15 @@ class geotiffStopping():
         if np.isnan(loss) or np.isinf(loss):
             self.early_stop = True
             return
-        elif self.best_score is None:
-            self.best_score = loss
-        elif loss > self.best_score - self.min_delta:
+        self.loss_history.append(loss)
+        avg_loss = np.mean(self.loss_history)
+        if self.best_score is None or avg_loss < self.best_score - self.min_delta:
+            self.best_score = avg_loss
+            self.counter = 0
+        else:
             self.counter += 1
             if self.counter >= self.patience:
                 self.early_stop = True
-        else:
-            self.best_score = loss
-            self.counter = 0
 
 # Function:
 

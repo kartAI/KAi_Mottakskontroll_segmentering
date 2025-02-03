@@ -71,16 +71,16 @@ def convert_coords(geom, src, zone, save_as_latlon):
         for x, y in geom.coords:
             utm_x, utm_y = src.xy(y, x)
             if save_as_latlon:
-                lat, lon = C.UTMtoLatLon(utm_x, utm_y, zone)
-                coords.append((lat, lon))
+                lat, lon = C.UTMtoLatLon(utm_y, utm_x, zone)
+                coords.append((lon, lat))
             else:
                 coords.append((utm_y, utm_x))
         return LineString(coords)
     elif isinstance(geom, Point):
         utm_x, utm_y = src.xy(geom.y, geom.x)
         if save_as_latlon:
-            lat, lon = C.UTMtoLatLon(utm_x, utm_y, zone)
-            return Point(lat, lon)
+            lat, lon = C.UTMtoLatLon(utm_y, utm_x, zone)
+            return Point(lon, lat)
         else:
             return Point(utm_y, utm_x)
     print("Ingen")

@@ -23,6 +23,8 @@ def mainTrain():
     """
     Performs the main part of training a new FarSeg model.
     """
+    print()
+    log_file = gf.get_valid_input("Where will you log the process (.log file): ", gf.resetFile)
     # Folder with geopackage data (buildings and roads):
     geopackage_folder = gf.get_valid_input("Where are the geopackages stored(?): ", gf.doesPathExists)
     # Folder with a lot of GeoTIFFs:
@@ -52,8 +54,43 @@ def mainTrain():
     # Give a name for the trained model:
     model_path = gf.get_valid_input("Where will you save the model(?): ", gf.emptyFolder)
     model_name = input("Give the model a name (ends with '.pth'): ")
+
+    info = "\n".join([f"- {key}: {len(value)}" for key, value in geopackages.items()])
+
+    gf.log_info(
+        log_file,
+        f"""
+######################################
+Training of a new FarSeg model started\n######################################\n
+Input data:\n
+Geopackage folder: {geopackage_folder}
+GeoTIFF folder: {geotiff_folder}
+Tile folder: {tile_folder}
+
+Geopackage data:
+{info}
+
+Number of GeoTIFFs for training: {len(tif_files)}\n
+Hyper parameters:
+- Batches: {batches}
+- Epochs: {epochs}
+- Workers: {num_workers}
+- Learning rate: {learning_rate}
+- Classes: {num_classes}
+- Patience: {patience}
+- Minimum improvement: {min_improvement}
+- Train-validation-split: {val_split}\n
+The trained model will be saved as:
+Folder: {model_path}
+File: {model_name}
+        """
+    )
+
+    counter = 1
+
     # Loops through each GeoTIFF file:
     for tif in tqdm(tif_files, 'GeoTIFF files'):
+        gf.log_info(f"\nTraining on GeoTIFF #{counter}\n")
         # Step 1: Generate tile for the current GeoTIFF
         preProcessing.generate_tiles(tif)
         valid_tiles = tileContainer.validate(tile_folder)
@@ -65,13 +102,34 @@ def mainTrain():
             continue
         if len(train_files) == 0 or len(val_files) == 0:
             continue
+
+        gf.log_info(
+            log_file,
+            f"""
+Training files: {len(train_files)}
+Validation files: {len(val_files)}
+            """
+        )
+
         # Step 3: Prepare datasets and dataloaders for current tiles
         train_dataset = MapSegmentationDataset(train_files, geopackages)
         val_dataset = MapSegmentationDataset(val_files, geopackages)
         train_loader = DataLoader(train_dataset, batch_size=batches, shuffle=True, num_workers=num_workers) # , pin_memory=True)
         val_loader = DataLoader(val_dataset, batch_size=batches, shuffle=False, num_workers=num_workers) # , pin_memory=True)
         # Step 4: Train the modelon this batch of tiles
-        loss = train(model, train_loader, val_loader, criterion, optimizer, num_epochs=epochs, patience=patience, min_delta=min_improvement, save_path=os.path.join(model_path, model_name), output=True)
+        loss = train(
+            model=model,
+            train_loader=train_loader,
+            val_loader=val_loader,
+            criterion=criterion,
+            optimizer=optimizer,
+            num_epochs=epochs,
+            patience=patience,
+            min_delta=min_improvement,
+            save_path=os.path.join(model_path, model_name),
+            output=True,
+            log_file=log_file
+        )
         geotiffCounter(loss)
         # Step 5: Clear tiles in the folder to prepare for next GeoTIFF
         del train_dataset, val_dataset, train_loader, val_loader, loss
@@ -80,9 +138,19 @@ def mainTrain():
         torch.save(model.state_dict(), os.path.join(model_path, model_name))
         # Early stop check
         if geotiffCounter.early_stop:
+            gf.log_info(
+                log_file,
+                f"Stopped at GeoTIFF {counter} with loss {geotiffCounter.best_score}"
+            )
             break
+        counter += 1
     # Removes the tile_folder after training:
     if os.path.exists(tile_folder):
         shutil.rmtree(tile_folder)
     # Save the model after training:
     torch.save(model.state_dict(), os.path.join(model_path, model_name))
+
+    gf.log_info(
+        log_file,
+        f"Training finished.\nModel saved at {os.path.join(model_path, model_name)}"
+    )

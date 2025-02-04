@@ -25,6 +25,8 @@ def mainInference():
     Performs the main part of inference with a trained FarSeg model.
     """
     # Path to data:
+    print()
+    log_file = gf.get_valid_input("Where will you log the process (.log file): ", gf.resetFile)
     model_path = gf.get_valid_input("Path to your trained model: ", gf.doesPathExists)
     geotiff_folder = gf.get_valid_input("Path to your folder with orthophotos to be analyzed: ", gf.doesPathExists)
     tile_folder = gf.get_valid_input("Where would you like to store temporarly tiles(?): ", gf.emptyFolder)
@@ -33,8 +35,25 @@ def mainInference():
     # If you want jpg or not:
     choice = gf.get_valid_input("Do you want to save the results as .jpg files as well(?)(y/n): ", lambda x: gf.yesNo(x) is not None)
     choice = gf.yesNo(choice)
+
+    gf.log_info(
+        log_file,
+        f"""
+####################
+Segmentation started\n####################\n
+Input data:\n
+Model: {model_path}
+GeoTIFF folder: {geotiff_folder}
+Tile folder: {tile_folder}
+Segmented folder: {segmented_folder}
+Result folder: {output_folder}
+Saves as jpg as well: {choice}
+        """
+    )
+
     # Fetches GPU or CPU device:
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    gf.log_info(log_file, f"\nDevice: {device}\n")
     # Load the trained model:
     num_classes = 3
     model, _, _ = initialize_model(num_classes)
@@ -50,6 +69,7 @@ def mainInference():
     colors = np.array([color_map[i] for i in range(num_classes)], dtype=np.uint8) # Returns RGB colors
     # Runs inference on new GeoTIFFs:
     geotiff_paths = glob.glob(geotiff_folder + '/*.tif')
+    gf.log_info(log_file, f"Number of geotiffs: {len(geotiff_paths)}\n")
     tileGenerator = preProcessor(0.7, tile_folder)
     imageCombiner = postProcessor(tile_folder, segmented_folder)
     imageHandler = imageSaver()
@@ -92,9 +112,21 @@ def mainInference():
             geotiff_output_filepath = os.path.join(segmented_folder, output_filename)
             imageHandler.createGeoTIFF(geotiff_output_filepath, metadata["profile"], segmented_image_rgb)
         # Step 8: Merge all tiles into a final combined image
-        output_original = os.path.join(output_folder, f"merged_original_tif_{k}.tif")
-        output_segmented = os.path.join(output_folder, f"merged_segmented_tif_{k}.tif")
+        output_original = os.path.join(output_folder, f"merged_original_tif_{k+1}.tif")
+        output_segmented = os.path.join(output_folder, f"merged_segmented_tif_{k+1}.tif")
         imageCombiner.merge_images(output_original, output_segmented, choice)
+
+        gf.log_info(
+            log_file,
+            f"""
+GeoTIFF #{k+1}:
+Number of tiles: {len(splitted_geotiffs)}
+Segmented results saved as:
+{output_original}
+{output_segmented}\n
+            """
+        )
+
         # Step 9: Prepare for next GeoTIFF by removing all the generated tiles
         gf.emptyFolder(tile_folder)
         gf.emptyFolder(segmented_folder)

@@ -46,7 +46,7 @@ def yesNo(input):
         return True
     elif input in ["n", "no"]:
         return False
-    return None  # Return None explicitly for invalid input
+    return None # Return None explicitly for invalid input
 
 def doesPathExists(input):
     """

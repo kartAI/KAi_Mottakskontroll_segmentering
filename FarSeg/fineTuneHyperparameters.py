@@ -35,15 +35,28 @@ def grid_search_training(hyperparameter_grid, geotiffs, geopackages, tile_folder
     best_params = None
     best_val_loss = float('inf')
 
+    # Load data and processes:
     tileValidator = tileValidation(geopackages)
     geopackages = gf.load_geopackages(geopackages)
     pre_processing = preProcessor(0.7, tile_folder)
+
+    # Iterate over all the GeoTIFFs to create tiles:
     count = 1
     for tif in glob.glob(geotiffs + '/*.tif'):
         pre_processing.generate_tiles(tif, remove=False, count=count)
         count += 1
     geotiffs = tileValidator.validate(tile_folder)
-    gf.log_info(log_file, str(len(geotiffs)))
+    
+    gf.log_info(
+        log_file,
+        f"""
+################
+Hyper parameters\n################\n
+Number of tiles: {len(geotiffs)}
+     
+        """
+    )
+
     train_files, val_files = pre_processing.split_data(liste=geotiffs)
 
     # Iterate through each combination of hyperparameters:
@@ -80,7 +93,7 @@ def grid_search_training(hyperparameter_grid, geotiffs, geopackages, tile_folder
             min_delta=params['min_improvement'],
             output=True
         )
-        gf.log_info(log_file, f"Validation loss for params {params}: {val_loss}")
+        gf.log_info(log_file, f"Validation loss for params {params}: {val_loss}\n")
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             best_params = params
@@ -92,7 +105,7 @@ def grid_search_training(hyperparameter_grid, geotiffs, geopackages, tile_folder
 # Program
 
 if __name__ == '__main__':
-    # Defines the hyperparameter grid
+    # Defines the hyperparameter grid:
     hyperparameter_grid = {
         'lr': [1e-3],
         'batch_size': [16],
@@ -101,6 +114,7 @@ if __name__ == '__main__':
         'min_improvement': [0.1]
     }
 
+    # Defines paths to the data:
     geopackages = 'C:/Jakob_Marianne_2024_2025/Geopackage_Farsund/Flater'
     train_files = 'C:/Jakob_Marianne_2024_2025/Ortofoto/Training_3'
     tile_folder = 'C:/Users/jshjelse/Documents/Tiles'
@@ -108,6 +122,7 @@ if __name__ == '__main__':
 
     gf.emptyFolder(tile_folder)
 
+    # Finds the best hyperparameters:
     best_hyperparameters = grid_search_training(
         hyperparameter_grid, train_files, geopackages, tile_folder, log_file
     )

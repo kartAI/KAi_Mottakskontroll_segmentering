@@ -41,7 +41,7 @@ class EarlyStopping():
         self.save_path = save_path
         self.model = model
         
-        self.monitor_train_loss = True # Kan endre og gjøre dette til input istedenfor
+        self.monitor_train_loss = True
 
         self.counter = 0
         self.best_score = None
@@ -96,6 +96,7 @@ class geotiffStopping():
         best_score (float): The best achieved score by the model so far, starts like None
         early_stop (bool): Wether or not to stop early
     """
+    
     def __init__(self, patience, min_delta, window_size=5):
         """
         Creates a new instance of geotiffStopping.

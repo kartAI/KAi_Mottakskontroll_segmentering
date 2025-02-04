@@ -26,6 +26,7 @@ def train(model, train_loader, val_loader, criterion, optimizer, num_epochs, pat
         min_delta (float): Float initializing the minimum improvement of the earlyStop instance, default 0.01
         save_path (string): Path to save the best model weights, default None
         output (bool): Wether or not the function should return a value, default False
+        log_file (string): Path to the log file to log progress in the training process
     
     Returns:
         if output:
@@ -42,10 +43,10 @@ def train(model, train_loader, val_loader, criterion, optimizer, num_epochs, pat
         for batch_idx, (images, masks) in enumerate(train_loader, 1):
             images, masks = images.to(device), masks.to(device)
             optimizer.zero_grad()
-            # Ensures masks are 3D (batch_size, height, width)
+            # Ensures masks are 3D (batch_size, height, width):
             if masks.dim() == 4:
                 masks = masks.squeeze(1) # Remove the channel dimension if it exists
-            # Convert masks to LongTensor for the loss function
+            # Convert masks to LongTensor for the loss function:
             masks = masks.long()
             with torch.amp.autocast(device_type='cuda', dtype=torch.bfloat16):
                 outputs = model(images) # Forward pass
@@ -64,7 +65,7 @@ def train(model, train_loader, val_loader, criterion, optimizer, num_epochs, pat
             del images, masks, outputs, loss
             torch.cuda.empty_cache()
             torch.cuda.synchronize()
-        # Validate at the end of each epoch
+        # Validate at the end of each epoch:
         avg_train_loss = epoch_loss / len(train_loader)
         avg_val_loss, avg_iou = validate(model, val_loader, criterion, device)
         if log_file is not None and i % 5 == 0:

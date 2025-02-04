@@ -20,11 +20,13 @@ from Functionality.geoTIFFandJPEG import imageSaver
 from Functionality.postProcessing import postProcessor
 from Functionality.preProcessing import preProcessor
 
+# Function:
+
 def mainInference():
     """
     Performs the main part of inference with a trained FarSeg model.
     """
-    # Path to data:
+    # Paths to the data:
     print()
     log_file = gf.get_valid_input("Where will you log the process (.log file): ", gf.resetFile)
     model_path = gf.get_valid_input("Path to your trained model: ", gf.doesPathExists)
@@ -77,7 +79,7 @@ Saves as jpg as well: {choice}
         # Step 1: Generate tiles from the input GeoTIFF
         tileGenerator.generate_tiles(path)
         splitted_geotiffs = [os.path.join(tile_folder, f) for f in os.listdir(tile_folder) if f.endswith('.tif')]
-        # Step 2: Iterate over all the tiles:
+        # Step 2: Iterate over all the tiles
         for _, geotiff in tqdm(enumerate(splitted_geotiffs), "GeoTIFFs"):
             image_data, metadata = imageHandler.readGeoTIFF(geotiff)
             # Step 3: Adjust the image
@@ -94,7 +96,7 @@ Saves as jpg as well: {choice}
                 T.Normalize(mean=mean, std=std)
             ])
             # Step 4: Create image tensor
-            # Apply the transformation (ToTensor converts image to shape: (bands, height, width))
+            # Apply the transformation (ToTensor converts image to shape: (bands, height, width)):
             image_tensor = transform(image_data).unsqueeze(0).to(device) # Add batch dimension for model input
             # Step 5: Performe inference
             with torch.no_grad():

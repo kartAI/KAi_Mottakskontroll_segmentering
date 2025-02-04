@@ -37,7 +37,7 @@ class MapSegmentationDataset(Dataset):
         """
         self.geotiff_list = geotiffs
         self.geodata = geodata
-        self.transform = transform # Optional: For data augmentations
+        self.transform = transform
 
     def __len__(self):
         """
@@ -67,7 +67,8 @@ class MapSegmentationDataset(Dataset):
             out_shape = (src.height, src.width)
             geometries = {}
             masks = {}
-            # Combine the masks into a single-channel label (0: background, 1: buildings, 2: roads):
+            # Combine the masks into a single-channel label:
+            # (0: background, 1: buildings, 2: roads)
             label_mask = np.zeros(out_shape, dtype=np.uint8) # Initialize background as class 0
             for val, objtype in enumerate(self.geodata):
                 # Reproject geometries to math the CRS of the current GeoTIFF:
@@ -224,5 +225,5 @@ def tile_contains_valid_data(tile_data, nodata):
         # Checks if all pixels are nodata: if so, return False
         return not np.all(tile_data == nodata)
     else:
-        # If no nodata value is defined, assume all pixels have valid data
+        # If no nodata value is defined: assume all pixels have valid data
         return True

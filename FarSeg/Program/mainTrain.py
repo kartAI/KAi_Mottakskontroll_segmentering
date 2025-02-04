@@ -19,6 +19,8 @@ from Functionality.validation import tileValidation
 from Functionality.farSegModel import initialize_model, geotiffStopping
 from Functionality.train import train
 
+# Function:
+
 def mainTrain():
     """
     Performs the main part of training a new FarSeg model.
@@ -116,7 +118,7 @@ Validation files: {len(val_files)}
         val_dataset = MapSegmentationDataset(val_files, geopackages)
         train_loader = DataLoader(train_dataset, batch_size=batches, shuffle=True, num_workers=num_workers) # , pin_memory=True)
         val_loader = DataLoader(val_dataset, batch_size=batches, shuffle=False, num_workers=num_workers) # , pin_memory=True)
-        # Step 4: Train the modelon this batch of tiles
+        # Step 4: Train the model on this batch of tiles
         loss = train(
             model=model,
             train_loader=train_loader,

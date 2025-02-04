@@ -46,7 +46,7 @@ def UTMtoLatLon(x, y, zone):
     mu = m / (a * (1 - e**2 / 4 - 3 * e**4 / 64 - 5 * e**6 / 256))
     e1 = (1 - np.sqrt(1  - e**2)) / (1 + np.sqrt(1 - e**2))
 
-    # Foot print of the latitude
+    # Foot print of the latitude:
     J1 = 3 * e1 / 2 - 27 * e1**3 / 32
     J2 = 21 * e1**2 / 16 - 55 * e1**4 / 32
     J3 = 151 * e1**3 / 96

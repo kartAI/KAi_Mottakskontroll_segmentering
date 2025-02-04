@@ -63,7 +63,7 @@ class statistics():
             gf.log_info(log_file, f"{key}: {value}")
         # Plots data:
         buildings, roads = statistic["Building_distribution"], statistic["Road_distribution"]
-        # Buildings
+        # Buildings:
         plt.figure(figsize=(14, 6))
         plt.bar(buildings.keys(), buildings.values(), color='skyblue', alpha=0.7)
         plt.title('Buildings per Tile', fontsize=16)
@@ -73,7 +73,7 @@ class statistics():
         plt.grid(axis='y', linestyle='--', alpha=0.7)
         plt.tight_layout()
         plt.show()
-        # Roads
+        # Roads:
         plt.figure(figsize=(14, 6))
         plt.bar(roads.keys(), roads.values(), color='skyblue', alpha=0.7)
         plt.title('Roads per Tile', fontsize=16)

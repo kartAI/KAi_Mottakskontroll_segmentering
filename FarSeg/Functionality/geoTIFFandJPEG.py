@@ -44,16 +44,16 @@ class imageSaver():
             metadata (dict): Metadata about the GeoTIFF, including projection, transform, etc.
         """
         with rasterio.open(tif_file) as src:
-            # Read the GeoTIFF data
+            # Read the GeoTIFF data:
             image_data = src.read()
             
-            # Handle single-band or multi-band images
+            # Handle single-band or multi-band images:
             if image_data.shape[0] == 1:  # Single-band image
                 image_data = image_data[0]  # Remove the band dimension
             else:  # Multi-band image
                 image_data = np.transpose(image_data, (1, 2, 0))  # Rearrange to (height, width, bands)
 
-            # Normalize data if required
+            # Normalize data if required:
             if image_data.dtype != np.uint8: # If the data is not 8-bit
                 image_min = image_data.min()
                 image_max = image_data.max()
@@ -127,10 +127,11 @@ class imageSaver():
             rgb_mask (ndarray): The mask of the GeoTIFF based upon geopackage layers
         """
         image_data, metadata = self.readGeoTIFF(tif)
-        # Create RGB mask (only two layers: buildings and roads)
+        # Create RGB mask:
+        # (Only two layers: buildings and roads)
         rgb_mask =  np.zeros((metadata["height"], metadata["width"], 3), dtype='uint8')
 
-        # Rasterize geometries for buildings (red) and roads(yellow)
+        # Rasterize geometries for buildings (red) and roads(yellow):
         for layer, color in zip(['buildings', 'roads'], [(255, 0, 0), (255, 255, 0)]):
             if layer in self.geopackages:
                 shapes = [(geom, 1) for geom in self.geopackages[layer].geometry if geom.is_valid]

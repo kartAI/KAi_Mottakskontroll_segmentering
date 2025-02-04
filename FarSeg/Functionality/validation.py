@@ -139,11 +139,9 @@ def check_geographic_overlap(original_file, segmented_file):
             original_bounds = original.bounds
         with rasterio.open(segmented_file) as segmented:
             segmented_bounds = segmented.bounds
-        if original_bounds == segmented_bounds:
-            # Complete overlap
+        if original_bounds == segmented_bounds: # Checks for complete overlap
             return True
         else:
-            # Not overlapping
             return False
     except Exception as e:
         print(f"An error occured: {e}")

@@ -24,19 +24,17 @@ if __name__ == '__main__':
     Just write a number between 1-4 to choose action.
     """)
 
-    choice = gf.get_valid_input("Perform (1-4): ", gf.positiveNumber)
+    choice = int(gf.get_valid_input("Perform (1-4): ", gf.positiveNumber))
 
-    if choice.isdigit():
-        choice = int(choice)
-        if choice == 1:
-            mainTrain()
-        elif choice == 2:
-            mainInference()
-        elif choice == 3:
-            mainValidation()
-        elif choice == 4:
-            geopackages = gf.get_valid_input("Where are the stored geopackages(?): ", gf.doesPathExists)
-            stat = statistics(geopackages)
-            stat.main()
+    if choice == 1:
+        mainTrain()
+    elif choice == 2:
+        mainInference()
+    elif choice == 3:
+        mainValidation()
+    elif choice == 4:
+        geopackages = gf.get_valid_input("Where are the stored geopackages(?): ", gf.doesPathExists)
+        stat = statistics(geopackages)
+        stat.main()
 
     print("Thanks, and good bye!")

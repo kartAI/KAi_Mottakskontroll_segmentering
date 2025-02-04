@@ -7,10 +7,11 @@ from torchmetrics import JaccardIndex
 from tqdm import tqdm
 
 from farSegModel import EarlyStopping
+import generalFunctions as gf
 
 # Functions:
 
-def train(model, train_loader, val_loader, criterion, optimizer, num_epochs, patience, min_delta, save_path=None, output=False):
+def train(model, train_loader, val_loader, criterion, optimizer, num_epochs, patience, min_delta, save_path=None, output=False, log_file=None):
     """
     Training loop for FarSeg segmentation model.
 
@@ -35,7 +36,7 @@ def train(model, train_loader, val_loader, criterion, optimizer, num_epochs, pat
     criterion = criterion.to(device)
     scaler = torch.amp.GradScaler()
     early_stopping = EarlyStopping(patience=patience, min_delta=min_delta, save_path=save_path, model=model)
-    for _ in tqdm(range(num_epochs), desc='Epochs'):
+    for i in tqdm(range(num_epochs), desc='Epochs'):
         epoch_loss = 0
         model.train()
         for batch_idx, (images, masks) in enumerate(train_loader, 1):
@@ -66,6 +67,16 @@ def train(model, train_loader, val_loader, criterion, optimizer, num_epochs, pat
         # Validate at the end of each epoch
         avg_train_loss = epoch_loss / len(train_loader)
         avg_val_loss, avg_iou = validate(model, val_loader, criterion, device)
+        if log_file is not None and i % 5 == 0:
+            gf.log_info(
+                log_file,
+                f"""
+Epoch: {i+1}
+Average training loss: {avg_train_loss}
+Average validation loss: {avg_val_loss}
+Average IoU score: {avg_iou}
+                """
+            )
         early_stopping(avg_val_loss, avg_train_loss)
         torch.cuda.empty_cache()
         if avg_iou > 0.85:

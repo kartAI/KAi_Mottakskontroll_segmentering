@@ -130,16 +130,14 @@ def load_geopackages(folder):
         geodata (dict): Dictionary containing all the GeoDataFrames for buildings and roads
     """
     geopackages = [os.path.join(folder, f) for f in os.listdir(folder) if f.endswith('.gpkg')]
-    types = ["buildings", "roads"]
     geodata = {}
 
     for i in range(len(geopackages)):
-        if i > len(types) - 1:
-            break
+        name = geopackages[i].split(".")[0].split('\\')[-1].lower()
         gdf = gpd.read_file(geopackages[i])
         gdf['geometry'] = gdf['geometry'].apply(make_valid)
         gdf = gdf[gdf['geometry'].notnull() & ~gdf['geometry'].is_empty]
-        geodata[types[i]] = gdf
+        geodata[name] = gdf
     
     return geodata
 

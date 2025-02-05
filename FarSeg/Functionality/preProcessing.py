@@ -68,7 +68,7 @@ class MapSegmentationDataset(Dataset):
             geometries = {}
             masks = {}
             # Combine the masks into a single-channel label:
-            # (0: background, 1: buildings, 2: roads)
+            # (0: background, 1: buildings, 2: roads, etc.)
             label_mask = np.zeros(out_shape, dtype=np.uint8) # Initialize background as class 0
             for val, objtype in enumerate(self.geodata):
                 # Reproject geometries to math the CRS of the current GeoTIFF:

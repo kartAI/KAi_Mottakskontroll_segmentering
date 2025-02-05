@@ -42,7 +42,7 @@ def mainTrain():
     epochs = int(gf.get_valid_input("Number of epochs (default: 30): ", gf.positiveNumber, default=30))
     num_workers = int(gf.get_valid_input("Number of workers to use (default: 8): ", gf.positiveNumber, default=8))
     learning_rate = float(gf.get_valid_input("Float number to use as learning rate (default: 0.0001): ", gf.positiveNumber, default=0.0001))
-    num_classes = 3
+    num_classes = len(geopackages) + 1 # + 1 because of the background = nothing
     patience = int(gf.get_valid_input("Number of epochs to wait as patience (default: 3): ", gf.positiveNumber, default=3))
     min_improvement = float(gf.get_valid_input("Float number to use as minimum improvement (default: 0.01): ", gf.positiveNumber, default=0.01))
     val_split = 0.7
@@ -56,6 +56,7 @@ def mainTrain():
     # Give a name for the trained model:
     model_path = gf.get_valid_input("Where will you save the model(?): ", gf.emptyFolder)
     model_name = input("Give the model a name (ends with '.pth'): ")
+    print()
 
     info = "\n".join([f"- {key}: {len(value)}" for key, value in geopackages.items()])
 
@@ -92,7 +93,7 @@ File: {model_name}
 
     # Loops through each GeoTIFF file:
     for tif in tqdm(tif_files, 'GeoTIFF files'):
-        gf.log_info(f"\nTraining on GeoTIFF #{counter}\n")
+        gf.log_info(log_file, f"\nTraining on GeoTIFF #{counter}\n")
         # Step 1: Generate tile for the current GeoTIFF
         preProcessing.generate_tiles(tif)
         valid_tiles = tileContainer.validate(tile_folder)

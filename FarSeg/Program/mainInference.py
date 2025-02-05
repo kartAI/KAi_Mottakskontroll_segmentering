@@ -30,6 +30,7 @@ def mainInference():
     print()
     log_file = gf.get_valid_input("Where will you log the process (.log file): ", gf.resetFile)
     model_path = gf.get_valid_input("Path to your trained model: ", gf.doesPathExists)
+    geopackage_folder = gf.get_valid_input("Path to your geopackages: ", gf.doesPathExists)
     geotiff_folder = gf.get_valid_input("Path to your folder with orthophotos to be analyzed: ", gf.doesPathExists)
     tile_folder = gf.get_valid_input("Where would you like to store temporarly tiles(?): ", gf.emptyFolder)
     segmented_folder = gf.get_valid_input("Where would you like to store the segmented tiles(?): ", gf.emptyFolder)
@@ -57,7 +58,7 @@ Saves as jpg as well: {choice}
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     gf.log_info(log_file, f"\nDevice: {device}\n")
     # Load the trained model:
-    num_classes = 3
+    num_classes = len(gf.load_geopackages(geopackage_folder)) + 1
     model, _, _ = initialize_model(num_classes)
     model.load_state_dict(torch.load(model_path, weights_only=True)) # Loads the model from the saved file
     model = model.to(device)

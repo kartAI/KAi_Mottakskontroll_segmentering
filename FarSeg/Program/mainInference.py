@@ -38,6 +38,7 @@ def mainInference():
     # If you want jpg or not:
     choice = gf.get_valid_input("Do you want to save the results as .jpg files as well(?)(y/n): ", lambda x: gf.yesNo(x) is not None)
     choice = gf.yesNo(choice)
+    print()
 
     gf.log_info(
         log_file,
@@ -81,7 +82,7 @@ Saves as jpg as well: {choice}
         tileGenerator.generate_tiles(path)
         splitted_geotiffs = [os.path.join(tile_folder, f) for f in os.listdir(tile_folder) if f.endswith('.tif')]
         # Step 2: Iterate over all the tiles
-        for _, geotiff in tqdm(enumerate(splitted_geotiffs), "GeoTIFFs"):
+        for i, geotiff in tqdm(enumerate(splitted_geotiffs), desc=f"Tiles processed for GeoTIFF {i}"):
             image_data, metadata = imageHandler.readGeoTIFF(geotiff)
             # Step 3: Adjust the image
             # Check if the image has 3 bands (for RGB). If not, adapt the normalization dynamically:

@@ -23,6 +23,7 @@ def mainValidation():
     geopackage_folder = gf.get_valid_input("Where are the relevant geopackages stored(?): ", gf.doesPathExists)
     mask_folder = gf.get_valid_input("Where would you store temporarly masks(?): ", gf.emptyFolder)
     log_file = gf.get_valid_input("Write the path of the log file that will contain the results: ", gf.resetFile)
+    print()
     # Validates the data:
     validator = validation(result_folder, geopackage_folder)
     validator.validate(mask_folder, log_file)

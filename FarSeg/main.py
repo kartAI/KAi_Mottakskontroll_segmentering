@@ -12,17 +12,17 @@ from Program.mainValidation import mainValidation
 
 if __name__ == '__main__':
     print("""
-    Hello!
+Hello!
 
-    Here you got four alternatives:
+Here you got four alternatives:
 
-    1. Train a new FarSeg segmentation model
-    2. Use a trained FarSeg model to perform segmentation
-    3. Validate results from inference with a FarSeg model
-    4. See relevant statistics about your geographic data
+1. Train a new FarSeg segmentation model
+2. Use a trained FarSeg model to perform segmentation
+3. Validate results from inference with a FarSeg model
+4. See relevant statistics about your geographic data
 
-    Just write a number between 1-4 to choose action.
-    """)
+Just write a number between 1-4 to choose action.
+""")
 
     choice = int(gf.get_valid_input("Perform (1-4): ", gf.positiveNumber))
 

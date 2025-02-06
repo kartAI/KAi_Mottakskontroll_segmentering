@@ -9,6 +9,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torchgeo.models import FarSeg
 
+import generalFunctions as gf
+
 # Classes:
 
 class EarlyStopping():
@@ -47,35 +49,47 @@ class EarlyStopping():
         self.best_score = None
         self.early_stop = False
     
-    def __call__(self, val_loss, train_loss):
+    def __call__(self, val_loss, train_loss, log_file=None):
         """
         Checks if the learning is going forward.
         Counts the number of epochs until the patience is passed and
         change early_stop, that will stop the training loop.
 
         Args:
-            val_loss (float): Loss values of the last validation
+            val_loss (float): Loss value of the last validation
+            train_loss (float): Loss value of the last training session
+            log_file (string): Path to the log file to log proress, default None
         """
         if np.isnan(val_loss) or np.isinf(val_loss):
             self.early_stop = True
+            if log_file != None:
+                gf.log_info(log_file, f"Invalid loss: {val_loss}")
             return
-        elif self.best_score is None:
+        elif self.best_score == None:
             self.best_score = val_loss
-            if self.save_path is not None:
+            if self.save_path != None:
                 self.save_checkpoint()
         elif val_loss > self.best_score - self.min_delta:
+            if val_loss < self.best_score:
+                self.best_score = val_loss
             self.counter += 1
             if self.counter >= self.patience:
                 self.early_stop = True
+                if log_file != None:
+                    gf.log_info(log_file, "The training during this epoch for this GeoTIFF did not make the model better.")
         else:
             self.best_score = val_loss
             self.counter = 0
             self.save_checkpoint()
         # If train loss, checks for overfitting:
+        """
         if self.monitor_train_loss and train_loss is not None:
             if train_loss < self.best_score and val_loss > self.best_score:
                 self.early_stop = True
-    
+                if log_file != None:
+                    gf.log_info(log_file, "Stops training because of possible overfitting.")
+        """
+
     def save_checkpoint(self):
         """
         Saves the best model weights
@@ -115,7 +129,7 @@ class geotiffStopping():
         self.best_score = None
         self.early_stop = False
 
-    def __call__(self, loss):
+    def __call__(self, loss, log_file=None):
         """
         Checks if the learning is going forward.
         Counts the number of GeoTIFFs until the patience is passed and
@@ -123,9 +137,12 @@ class geotiffStopping():
 
         Args:
             val_loss (float): Loss values of the last validation
+            log_file (string): Path to the log file to log proress, default None
         """
         if np.isnan(loss) or np.isinf(loss):
             self.early_stop = True
+            if log_file:
+                gf.log_info(log_file, f"Invalid loss: {loss}")
             return
         self.loss_history.append(loss)
         avg_loss = np.mean(self.loss_history)
@@ -136,6 +153,8 @@ class geotiffStopping():
             self.counter += 1
             if self.counter >= self.patience:
                 self.early_stop = True
+                if log_file:
+                    gf.log_info(log_file, "The model is not getting better anymore.")
 
 # Function:
 

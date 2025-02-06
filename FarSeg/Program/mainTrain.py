@@ -49,6 +49,7 @@ def mainTrain():
     # Validation element:
     tileContainer = tileValidation(geopackage_folder)
     # Initialize model, loss function and optimizer:
+    torch.cuda.empty_cache()
     model, criterion, optimizer = initialize_model(num_classes, lr=learning_rate)
     # Initializes the pre-processing element:
     preProcessing = preProcessor(val_split, tile_folder)
@@ -86,7 +87,7 @@ Hyper parameters:
 The trained model will be saved as:
 Folder: {model_path}
 File: {model_name}
-        """
+"""
     )
 
     counter = 1
@@ -111,7 +112,7 @@ File: {model_name}
             f"""
 Training files: {len(train_files)}
 Validation files: {len(val_files)}
-            """
+"""
         )
 
         # Step 3: Prepare datasets and dataloaders for current tiles

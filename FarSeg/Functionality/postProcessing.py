@@ -30,14 +30,16 @@ class postProcessor():
         self.geotiff_folder = geotiff_folder
         self.segmented_folder = segmented_folder
     
-    def merge_images(self, original, segmented, jpeg=False):
+    def merge_images(self, original, segmented, original_size, jpeg=False):
         """
         Combines all GeoTIFF files from a folder into one single .tif file,
-        and converts it to .jpg as well.
+        crops the merged image to the specified original size,
+        and converts it to .jpg as well, if requested.
 
         Args:
             original (string): File path and name of the merged, original output file (aerial image) as .tif file
             segmented (string): File path and name of the merged, segmented output file (segmented image) as .tif file
+            original_size (tuple): (height, width) in pixels for cropping the final image
             jpeg (bool): Boolean value telling wether or not to save image as JPEG as well as GeoTIFF, default False
         
         Note:
@@ -74,7 +76,7 @@ class postProcessor():
         for geotiff_file, segmented_file in zip(geotiffs, segmented_geotiffs):
             row, col = parse_tile_filename(geotiff_file)
             # Merge original image by fetching data:
-            image_data, metadata = imageHandler.readGeoTIFF(os.path.join(self.geotiff_folder, geotiff_file))
+            image_data, _ = imageHandler.readGeoTIFF(os.path.join(self.geotiff_folder, geotiff_file))
             for band in range(3):
                 full_original_image[
                     row * tile_height : (row + 1) * tile_height,
@@ -82,17 +84,26 @@ class postProcessor():
                     band
                 ] = image_data[:, :, band]
             # Merge segmented image by fetching data:
-            image_data, metadata = imageHandler.readGeoTIFF(os.path.join(self.segmented_folder, segmented_file))
+            image_data, _ = imageHandler.readGeoTIFF(os.path.join(self.segmented_folder, segmented_file))
             for band in range(3):
                 full_segmented_image[
                     row * tile_height : (row + 1) * tile_height,
                     col * tile_width  : (col + 1) * tile_width,
                     band
                 ] = image_data[:, :, band]
+        # Crop to the specified original size:
+        crop_height, crop_width = original_size
+        cropped_original_image = full_original_image[:crop_height, :crop_width, :]
+        cropped_segmented_image = full_segmented_image[:crop_height, :crop_width, :]
+        # Update profile to match cropped size:
+        profile.update({
+            "height": crop_height,
+            "width": crop_width
+        })
         # Save the merged original image as GeoTIFF:
-        imageHandler.createGeoTIFF(original, profile, full_original_image)
+        imageHandler.createGeoTIFF(original, profile, cropped_original_image)
         # Save the merged segmented image as GeoTIFF:
-        imageHandler.createGeoTIFF(segmented, profile, full_segmented_image)
+        imageHandler.createGeoTIFF(segmented, profile, cropped_segmented_image)
         if jpeg:
             # Convert final GeoTIFF to JPG:
             imageHandler.saveGeoTIFFasJPEG(original, os.path.dirname(original))

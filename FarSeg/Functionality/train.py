@@ -91,8 +91,6 @@ Average IoU score: {avg_iou}
                 f"Stopped at epoch {i+1} with loss {early_stopping.best_score}"
             )
             break
-        if early_stopping.early_stop:
-            break
     if output:
         if early_stopping.best_score:
             if not (np.isnan(early_stopping.best_score) or np.isinf(early_stopping.best_score)):

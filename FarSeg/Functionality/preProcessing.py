@@ -152,14 +152,14 @@ class preProcessor():
                 # Adjust the transform for the current tile:
                 new_transform = metadata["transform"] * rasterio.Affine.translation(x_start, y_start)
                 # Checks if the tile contains any valid data:
-                if tile_contains_valid_data(tile_data, metadata.get("nodata", 0)):
-                    # Defines output filename:
-                    if not count:
-                        filename = os.path.join(self.output, f"tile_{i}_{j}.tif")
-                    else:
-                        filename = os.path.join(self.output, f"tile_{count}_{i}_{j}.tif")
-                    # Saves the tile:
-                    self.save_tile(tile_data, new_transform, metadata, filename)
+                # if tile_contains_valid_data(tile_data, metadata.get("nodata", 0)):
+                # Defines output filename:
+                if not count:
+                    filename = os.path.join(self.output, f"tile_{i}_{j}.tif")
+                else:
+                    filename = os.path.join(self.output, f"tile_{count}_{i}_{j}.tif")
+                # Saves the tile:
+                self.save_tile(tile_data, new_transform, metadata, filename)
         return count_x * count_y
 
     def save_tile(self, tile_data, transform, metadata, filename):

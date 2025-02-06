@@ -65,11 +65,13 @@ class EarlyStopping():
             if log_file != None:
                 gf.log_info(log_file, f"Invalid loss: {val_loss}")
             return
-        elif self.best_score is None:
+        elif self.best_score == None:
             self.best_score = val_loss
-            if self.save_path is not None:
+            if self.save_path != None:
                 self.save_checkpoint()
         elif val_loss > self.best_score - self.min_delta:
+            if val_loss < self.best_score:
+                self.best_score = val_loss
             self.counter += 1
             if self.counter >= self.patience:
                 self.early_stop = True

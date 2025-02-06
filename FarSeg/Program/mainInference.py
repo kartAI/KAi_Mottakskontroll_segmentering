@@ -18,7 +18,7 @@ from Functionality import generalFunctions as gf
 from Functionality.farSegModel import initialize_model
 from Functionality.geoTIFFandJPEG import imageSaver
 from Functionality.postProcessing import postProcessor
-from Functionality.preProcessing import preProcessor
+from Functionality.preProcessing import preProcessor, tile_contains_valid_data
 
 # Function:
 
@@ -78,11 +78,14 @@ Saves as jpg as well: {choice}
     imageCombiner = postProcessor(tile_folder, segmented_folder)
     imageHandler = imageSaver()
     for k, path in enumerate(geotiff_paths):
+        # Step 0: Fetch original image size
+        _, info = imageHandler.readGeoTIFF(path)
+        original_size = (info["height"], info["width"])
         # Step 1: Generate tiles from the input GeoTIFF
         tileGenerator.generate_tiles(path)
         splitted_geotiffs = [os.path.join(tile_folder, f) for f in os.listdir(tile_folder) if f.endswith('.tif')]
         # Step 2: Iterate over all the tiles
-        for i, geotiff in tqdm(enumerate(splitted_geotiffs), desc=f"Tiles processed for GeoTIFF {i}"):
+        for _, geotiff in tqdm(enumerate(splitted_geotiffs), desc=f"Tiles processed for GeoTIFF {k+1}"):
             image_data, metadata = imageHandler.readGeoTIFF(geotiff)
             # Step 3: Adjust the image
             # Check if the image has 3 bands (for RGB). If not, adapt the normalization dynamically:
@@ -101,11 +104,18 @@ Saves as jpg as well: {choice}
             # Apply the transformation (ToTensor converts image to shape: (bands, height, width)):
             image_tensor = transform(image_data).unsqueeze(0).to(device) # Add batch dimension for model input
             # Step 5: Performe inference
-            with torch.no_grad():
-                output = model(image_tensor) # Forward pass through the model
-                predicted_segmented_mask = output.squeeze(0).argmax(0).cpu().numpy() # Shape: (height, width)
+            boolean = tile_contains_valid_data(image_data, metadata.get("nodata", 0))
+            if not boolean:
+                # Generate empty tile
+                predicted_segmented_mask = np.zeros((metadata["height"], metadata["width"], 3), dtype=np.uint8)
+            else:
+                with torch.no_grad():
+                    output = model(image_tensor) # Forward pass through the model
+                    predicted_segmented_mask = output.squeeze(0).argmax(0).cpu().numpy() # Shape: (height, width)
             # Step 6: Create an RGB image from the segmentation classes
-            segmented_image_rgb = colors[predicted_segmented_mask]
+            segmented_image_rgb = predicted_segmented_mask
+            if boolean:
+                segmented_image_rgb = colors[predicted_segmented_mask]
             metadata["profile"].update({
                 'count': 3, # 3 channels for RGB
                 'dtype': 'uint8',
@@ -118,7 +128,7 @@ Saves as jpg as well: {choice}
         # Step 8: Merge all tiles into a final combined image
         output_original = os.path.join(output_folder, f"merged_original_tif_{k+1}.tif")
         output_segmented = os.path.join(output_folder, f"merged_segmented_tif_{k+1}.tif")
-        imageCombiner.merge_images(output_original, output_segmented, choice)
+        imageCombiner.merge_images(output_original, output_segmented, original_size, choice)
 
         gf.log_info(
             log_file,

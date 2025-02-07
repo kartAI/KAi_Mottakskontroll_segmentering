@@ -14,7 +14,7 @@ project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(project_root)
 
 from Functionality import generalFunctions as gf
-from Functionality.preProcessing import MapSegmentationDataset, preProcessor
+from Functionality.preProcessing import MapSegmentationDataset, preProcessor, geotiff_to_geopackage
 from Functionality.validation import tileValidation
 from Functionality.farSegModel import initialize_model, geotiffStopping
 from Functionality.train import train
@@ -27,14 +27,26 @@ def mainTrain():
     """
     print()
     log_file = gf.get_valid_input("Where will you log the process (.log file): ", gf.resetFile)
-    # Folder with geopackage data (buildings and roads):
-    geopackage_folder = gf.get_valid_input("Where are the geopackages stored(?): ", gf.doesPathExists)
+    # Folder with geographic data (buildings and roads):
+    geodata_folder = gf.get_valid_input("Where are the geographic data stored (the solution)(?): ", gf.doesPathExists)
     # Folder with a lot of GeoTIFFs:
     geotiff_folder = gf.get_valid_input("Where are the GeoTIFFs stored(?): ", gf.doesPathExists)
     # New folder to save all the tiles to be generated:
     tile_folder = gf.get_valid_input("Where should the tiles be saved(?): ", gf.emptyFolder)
     # Loads the geopackages:
-    geopackages = gf.load_geopackages(geopackage_folder) # [Buildings, roads]
+    geodata_gpkg = [f for f in os.listdir(geodata_folder) if f.endswith('.gpkg')]
+    geodata_tif = [f for f in os.listdir(geodata_folder) if f.endswith('.tif') and f.replace('.tif', '.gpkg') not in geodata_gpkg]
+    # If some of the training data is stored as GeoTIFF format:
+    if len(geodata_tif) > 0:
+        for file in geodata_tif:
+            file = os.path.join(geodata_folder, file)
+            geotiff_to_geopackage(
+                file,
+                file.replace(".tif", ".gpkg"),
+                file.split('.')[0].split('/')[-1],
+                log_file
+            )
+    geopackages = gf.load_geopackages(geodata_folder) # {"Buildings": [...], "Roads": [...], ...}
     # All GeoTIFF files in the training folder:
     tif_files = glob.glob(geotiff_folder + '/*.tif')
     # Hyper-parameters to use in the training:
@@ -47,7 +59,7 @@ def mainTrain():
     min_improvement = float(gf.get_valid_input("Float number to use as minimum improvement (default: 0.01): ", gf.positiveNumber, default=0.01))
     val_split = 0.7
     # Validation element:
-    tileContainer = tileValidation(geopackage_folder)
+    tileContainer = tileValidation(geodata_folder)
     # Initialize model, loss function and optimizer:
     torch.cuda.empty_cache()
     model, criterion, optimizer = initialize_model(num_classes, lr=learning_rate)
@@ -67,7 +79,7 @@ def mainTrain():
 ######################################
 Training of a new FarSeg model started\n######################################\n
 Input data:\n
-Geopackage folder: {geopackage_folder}
+Geopackage folder: {geodata_folder}
 GeoTIFF folder: {geotiff_folder}
 Tile folder: {tile_folder}
 
@@ -118,8 +130,8 @@ Validation files: {len(val_files)}
         # Step 3: Prepare datasets and dataloaders for current tiles
         train_dataset = MapSegmentationDataset(train_files, geopackages)
         val_dataset = MapSegmentationDataset(val_files, geopackages)
-        train_loader = DataLoader(train_dataset, batch_size=batches, shuffle=True, num_workers=num_workers) # , pin_memory=True)
-        val_loader = DataLoader(val_dataset, batch_size=batches, shuffle=False, num_workers=num_workers) # , pin_memory=True)
+        train_loader = DataLoader(train_dataset, batch_size=batches, shuffle=True, num_workers=num_workers)
+        val_loader = DataLoader(val_dataset, batch_size=batches, shuffle=False, num_workers=num_workers)
         # Step 4: Train the model on this batch of tiles
         loss = train(
             model=model,

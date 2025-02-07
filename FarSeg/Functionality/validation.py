@@ -93,7 +93,7 @@ class validation():
         count_roads = 0
         mIoU_buildings = 0
         mIoU_roads = 0
-        
+
         imageHandler = imageSaver(self.geopackages)
 
         for i in tqdm(range(len(self.originals)), desc="Images"):

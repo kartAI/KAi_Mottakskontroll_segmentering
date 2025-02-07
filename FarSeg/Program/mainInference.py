@@ -58,8 +58,10 @@ Saves as jpg as well: {choice}
     # Fetches GPU or CPU device:
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     gf.log_info(log_file, f"\nDevice: {device}\n")
+    geodata = gf.load_geopackages(geopackage_folder)
+    original_crs = list(geodata.values())[0].crs
     # Load the trained model:
-    num_classes = len(gf.load_geopackages(geopackage_folder)) + 1
+    num_classes = len(geodata) + 1
     model, _, _ = initialize_model(num_classes)
     model.load_state_dict(torch.load(model_path, weights_only=True)) # Loads the model from the saved file
     model = model.to(device)
@@ -81,6 +83,9 @@ Saves as jpg as well: {choice}
         # Step 0: Fetch original image size
         _, info = imageHandler.readGeoTIFF(path)
         original_size = (info["height"], info["width"])
+        image_crs = info["crs"]
+        if image_crs != original_crs:
+            image_crs = original_crs
         # Step 1: Generate tiles from the input GeoTIFF
         tileGenerator.generate_tiles(path)
         splitted_geotiffs = [os.path.join(tile_folder, f) for f in os.listdir(tile_folder) if f.endswith('.tif')]
@@ -119,7 +124,8 @@ Saves as jpg as well: {choice}
             metadata["profile"].update({
                 'count': 3, # 3 channels for RGB
                 'dtype': 'uint8',
-                'photometric': 'RGB'
+                'photometric': 'RGB',
+                'crs': image_crs
             })
             # Step 7: Save as GeoTIFF
             output_filename = os.path.splitext(os.path.basename(geotiff))[0] + '_segmented.tif'

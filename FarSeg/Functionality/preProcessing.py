@@ -2,11 +2,15 @@
 
 # Libraries:
 
+import geopandas as gpd
 import glob
 import numpy as np
 import os
+from pyproj import CRS
+from pyproj.database import query_crs_info
 import rasterio
-from rasterio.features import geometry_mask
+from rasterio.features import geometry_mask, shapes
+from shapely.geometry import shape
 import torch
 from torch.utils.data  import Dataset
 
@@ -144,7 +148,7 @@ class preProcessor():
                 if tile_data.shape[0] < self.height or tile_data.shape[1] < self.width:
                     padded_tile = np.full(
                         (self.height, self.width, tile_data.shape[2]),
-                        metadata.get("nodata", 0),
+                        0 if metadata.get("nodata", 0) == None else metadata.get("nodata", 0),
                         dtype=tile_data.dtype
                     )
                     padded_tile[:tile_data.shape[0], :tile_data.shape[1], :] = tile_data
@@ -227,3 +231,55 @@ def tile_contains_valid_data(tile_data, nodata):
     else:
         # If no nodata value is defined: assume all pixels have valid data
         return True
+
+def geotiff_to_geopackage(input_tiff, output_gpkg, layer_name, log_file):
+    """
+    Converts a binary GeoTIFF (1 = True, 0 = False) to a GeoPackage.
+
+    Args:
+        input_tiff (string): Path to the GeoTIFF
+        output_gpkg (string): Path to save the GeoPackage
+        layer_name (string): Name of the layer in the geopackage
+    """
+
+    def is_epsg(crs):
+        try:
+            return CRS.from_user_input(crs).to_epsg() is not None
+        except:
+            return False
+
+    # Open the GeoTIFF:
+    with rasterio.open(input_tiff) as src:
+        image = src.read(1) # Reads the first band
+        transform = src.transform
+        crs = src.crs
+
+    if crs == None or not is_epsg(crs):
+        user_crs = gf.get_valid_input("Write the EPSG-code here: ", gf.positiveNumber)
+        crs = CRS.from_epsg(int(user_crs))
+
+    # Filter the object from the layer (values = 1):
+    mask = image == 1
+
+    # Convert raster to vector (polygons):
+    shapes_gen = shapes(image, mask=mask, transform=transform)
+
+    # Create a list of geometries:
+    geoms = [
+        {"geometry": shape(geom), "properties": {"value": value}}
+        for geom, value in shapes_gen if value == 1
+    ]
+
+    if not geoms:
+        gf.log(log_file, f"No geometries found in {input_tiff}. Skips.")
+        return
+
+    # Convert to GeoDataFrame:
+    gdf = gpd.GeoDataFrame.from_features(geoms, crs=crs)
+
+    if gdf.crs is None:
+        gdf.set_crs(crs, inplace=True)
+
+    # Save as GeoPackage:
+    gdf.to_file(output_gpkg, layer=layer_name, driver="GPKG")
+    gf.log_info(log_file, f"GeoTIFF {input_tiff} saved as geopackage in {output_gpkg}")

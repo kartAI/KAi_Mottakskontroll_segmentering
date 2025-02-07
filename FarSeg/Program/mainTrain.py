@@ -27,7 +27,7 @@ def mainTrain():
     """
     print()
     log_file = gf.get_valid_input("Where will you log the process (.log file): ", gf.resetFile)
-    # Folder with geopackage data (buildings and roads):
+    # Folder with geographic data (buildings and roads):
     geodata_folder = gf.get_valid_input("Where are the geographic data stored (the solution)(?): ", gf.doesPathExists)
     # Folder with a lot of GeoTIFFs:
     geotiff_folder = gf.get_valid_input("Where are the GeoTIFFs stored(?): ", gf.doesPathExists)
@@ -39,6 +39,7 @@ def mainTrain():
     # If some of the training data is stored as GeoTIFF format:
     if len(geodata_tif) > 0:
         for file in geodata_tif:
+            file = os.path.join(geodata_folder, file)
             geotiff_to_geopackage(
                 file,
                 file.replace(".tif", ".gpkg"),

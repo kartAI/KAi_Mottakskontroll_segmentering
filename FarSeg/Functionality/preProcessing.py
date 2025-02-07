@@ -6,11 +6,13 @@ import geopandas as gpd
 import glob
 import numpy as np
 import os
+from pyproj import CRS
+from pyproj.database import query_crs_info
 import rasterio
 from rasterio.features import geometry_mask, shapes
+from shapely.geometry import shape
 import torch
 from torch.utils.data  import Dataset
-from shapely.geometry import shape
 
 import generalFunctions as gf
 from geoTIFFandJPEG import imageSaver
@@ -130,7 +132,6 @@ class preProcessor():
             gf.emptyFolder(self.output)
         imageHandler = imageSaver()
         data, metadata = imageHandler.readGeoTIFF(geotiff)
-        print(metadata)
         count_x = (metadata["width"] + self.width - 1) // self.width
         count_y = (metadata["height"] + self.height - 1) // self.height
         # Iterates over the grid without overlap:
@@ -241,11 +242,21 @@ def geotiff_to_geopackage(input_tiff, output_gpkg, layer_name, log_file):
         layer_name (string): Name of the layer in the geopackage
     """
 
+    def is_epsg(crs):
+        try:
+            return CRS.from_user_input(crs).to_epsg() is not None
+        except:
+            return False
+
     # Open the GeoTIFF:
     with rasterio.open(input_tiff) as src:
         image = src.read(1) # Reads the first band
         transform = src.transform
         crs = src.crs
+
+    if crs == None or not is_epsg(crs):
+        user_crs = gf.get_valid_input("Write the EPSG-code here: ", gf.positiveNumber)
+        crs = CRS.from_epsg(int(user_crs))
 
     # Filter the object from the layer (values = 1):
     mask = image == 1
@@ -259,8 +270,15 @@ def geotiff_to_geopackage(input_tiff, output_gpkg, layer_name, log_file):
         for geom, value in shapes_gen if value == 1
     ]
 
+    if not geoms:
+        gf.log(log_file, f"No geometries found in {input_tiff}. Skips.")
+        return
+
     # Convert to GeoDataFrame:
     gdf = gpd.GeoDataFrame.from_features(geoms, crs=crs)
+
+    if gdf.crs is None:
+        gdf.set_crs(crs, inplace=True)
 
     # Save as GeoPackage:
     gdf.to_file(output_gpkg, layer=layer_name, driver="GPKG")

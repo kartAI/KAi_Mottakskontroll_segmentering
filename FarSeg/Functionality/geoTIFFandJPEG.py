@@ -132,9 +132,10 @@ class imageSaver():
         rgb_mask =  np.zeros((metadata["height"], metadata["width"], 3), dtype='uint8')
 
         # Rasterize geometries for buildings (red) and roads(yellow):
-        for layer, color in zip(['buildings', 'roads'], [(255, 0, 0), (255, 255, 0)]):
-            if layer in self.geopackages:
-                shapes = [(geom, 1) for geom in self.geopackages[layer].geometry if geom.is_valid]
+        layers = list(self.geopackages.keys())
+        for layer, color in zip([0, 1], [(255, 0, 0), (255, 255, 0)]):
+            if layer < len(self.geopackages):
+                shapes = [(geom, 1) for geom in self.geopackages[layers[layer]].geometry if geom.is_valid]
                 layer_mask = rasterize(
                     shapes,
                     out_shape=(metadata["height"], metadata["width"]),

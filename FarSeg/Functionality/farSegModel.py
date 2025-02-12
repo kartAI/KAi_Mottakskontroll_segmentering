@@ -4,10 +4,14 @@
 
 from collections import deque
 import numpy as np
+import os
+import sys
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torchgeo.models import FarSeg
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__))))
 
 import generalFunctions as gf
 
@@ -22,7 +26,6 @@ class EarlyStopping():
         min_delta (float): Minimum improvement in the monitored metric required to continue
         save_path (string): Path to save the best model weights
         model (FarSeg model): The model to save the best state_dict from
-        monitor_state_dict (bool): If True, stops if train_loss decreases but val_loss increases
         counter (int): Number of epochs waited
         best_score (float): The best achieved score by the model so far, starts like None
         early_stop (bool): Wether or not to stop early
@@ -42,14 +45,12 @@ class EarlyStopping():
         self.min_delta = min_delta
         self.save_path = save_path
         self.model = model
-        
-        self.monitor_train_loss = True
 
         self.counter = 0
         self.best_score = None
         self.early_stop = False
     
-    def __call__(self, val_loss, train_loss, log_file=None):
+    def __call__(self, val_loss, log_file=None):
         """
         Checks if the learning is going forward.
         Counts the number of epochs until the patience is passed and
@@ -68,10 +69,11 @@ class EarlyStopping():
         elif self.best_score == None:
             self.best_score = val_loss
             if self.save_path != None:
-                self.save_checkpoint()
+                self.save_checkpoint(log_file)
         elif val_loss > self.best_score - self.min_delta:
             if val_loss < self.best_score:
                 self.best_score = val_loss
+                self.save_checkpoint(log_file)
             self.counter += 1
             if self.counter >= self.patience:
                 self.early_stop = True
@@ -80,22 +82,19 @@ class EarlyStopping():
         else:
             self.best_score = val_loss
             self.counter = 0
-            self.save_checkpoint()
-        # If train loss, checks for overfitting:
-        """
-        if self.monitor_train_loss and train_loss is not None:
-            if train_loss < self.best_score and val_loss > self.best_score:
-                self.early_stop = True
-                if log_file != None:
-                    gf.log_info(log_file, "Stops training because of possible overfitting.")
-        """
+            self.save_checkpoint(log_file)
 
-    def save_checkpoint(self):
+    def save_checkpoint(self, log_file=None):
         """
         Saves the best model weights
+
+        Args:
+            log_file (string): Path to the log file to log proress, default None
         """
-        if self.model is not None:
+        if self.model != None and self.save_path != None:
             torch.save(self.model.state_dict(), self.save_path)
+            if log_file != None:
+                gf.log_info(log_file, f"Model saved. {self.counter} - {self.best_score}")
 
 class geotiffStopping():
     """

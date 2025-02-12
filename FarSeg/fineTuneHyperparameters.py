@@ -3,6 +3,7 @@
 # Libraries:
 
 import glob
+import os
 from sklearn.model_selection import ParameterGrid
 import torch
 from torch.utils.data import DataLoader
@@ -10,8 +11,8 @@ from tqdm import tqdm
 
 from Functionality.farSegModel import initialize_model
 import Functionality.generalFunctions as gf
-from Functionality.preProcessing import MapSegmentationDataset, preProcessor
-from Functionality.train import train, validate
+from Functionality.preProcessing import MapSegmentationDataset, preProcessor, geotiff_to_geopackage
+from Functionality.train import train
 from Functionality.validation import tileValidation
 
 # Functions:
@@ -37,7 +38,20 @@ def grid_search_training(hyperparameter_grid, geotiffs, geopackages, tile_folder
 
     # Load data and processes:
     tileValidator = tileValidation(geopackages)
-    geopackages = gf.load_geopackages(geopackages)
+    # Loads the GeoPackages:
+    geodata_gpkg = [f for f in os.listdir(geopackages) if f.endswith('.gpkg')]
+    geodata_tif = [f for f in os.listdir(geopackages) if f.endswith('.tif') and f.replace('.tif', '.gpkg') not in geodata_gpkg]
+    # If some of the training data is stored as GeoTIFF format:
+    if len(geodata_tif) > 0:
+        for file in geodata_tif:
+            file = os.path.join(geopackages, file)
+            geotiff_to_geopackage(
+                file,
+                file.replace(".tif", ".gpkg"),
+                file.split('.')[0].split('/')[-1],
+                log_file
+            )
+    geopackages = gf.load_geopackages(geopackages) # {"Buildings": [...], "Roads": [...], ...}
     pre_processing = preProcessor(0.7, tile_folder)
 
     # Iterate over all the GeoTIFFs to create tiles:
@@ -45,7 +59,7 @@ def grid_search_training(hyperparameter_grid, geotiffs, geopackages, tile_folder
     for tif in glob.glob(geotiffs + '/*.tif'):
         pre_processing.generate_tiles(tif, remove=False, count=count)
         count += 1
-    geotiffs = tileValidator.validate(tile_folder)
+    geotiffs = tileValidator.validate(tile_folder, False)
     
     gf.log_info(
         log_file,
@@ -63,7 +77,7 @@ Number of tiles: {len(geotiffs)}
     for params in tqdm(grid, desc="Grid Search"):
         gf.log_info(log_file, f"Testing hyperparameters: {params}")
         # Initialize model, optimizer and loss function:
-        model, criterion, optimizer = initialize_model(num_classes=3, lr=params['lr'])
+        model, criterion, optimizer = initialize_model(num_classes=len(geopackages)+1, lr=params['lr'])
         # Set up DataSets and DataLoaders:
         train_dataset = MapSegmentationDataset(train_files, geopackages)
         val_dataset = MapSegmentationDataset(val_files, geopackages)
@@ -94,9 +108,10 @@ Number of tiles: {len(geotiffs)}
             output=True
         )
         gf.log_info(log_file, f"Validation loss for params {params}: {val_loss}\n")
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
-            best_params = params
+        if val_loss:
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                best_params = params
         # Clear CUDA cache after each run:
         torch.cuda.empty_cache()
     gf.log_info(log_file, f"Best hyperparameters: {best_params} with validation loss: {best_val_loss}")
@@ -107,18 +122,18 @@ Number of tiles: {len(geotiffs)}
 if __name__ == '__main__':
     # Defines the hyperparameter grid:
     hyperparameter_grid = {
-        'lr': [1e-3],
-        'batch_size': [16],
-        'epochs': [1],
-        'patience': [3],
-        'min_improvement': [0.1]
+        'lr': [1e-3, 1e-4, 1e-5],
+        'batch_size': [2, 4],
+        'epochs': [10, 20, 30],
+        'patience': [3, 5],
+        'min_improvement': [0.1, 0.01, 0.001]
     }
 
     # Defines paths to the data:
-    geopackages = 'C:/Jakob_Marianne_2024_2025/Geopackage_Farsund/Flater'
-    train_files = 'C:/Jakob_Marianne_2024_2025/Ortofoto/Training_3'
+    geopackages = 'C:/Jakob_Marianne_2024_2025/WH/1_The_two-period_image_data/2012/whole_image/train/label'
+    train_files = 'C:/Jakob_Marianne_2024_2025/WH/1_The_two-period_image_data/2012/whole_image/train/image'
     tile_folder = 'C:/Users/jshjelse/Documents/Tiles'
-    log_file = 'C:/Users/jshjelse/Documents/results.log'
+    log_file = 'C:/Users/jshjelse/Documents/FineTuning_NZ_1.log'
 
     gf.emptyFolder(tile_folder)
 

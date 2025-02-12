@@ -31,29 +31,33 @@ class tileValidation():
         """
         self.geopackages = gf.load_geopackages(folder)
     
-    def validate(self, tile_folder):
+    def validate(self, tile_folder, validate):
         """
         Validates the tiles depending on overlap with geopackages.
 
         Args:
             tile_folder (string): Path to the folder containing the GeoTIFFs
+            validate (bool): Wether or not to validate the tiles
         
         Returns:
-            valid_tiles (list[string]): A list with the file path to all valid tiles
+            valid_tiles (list[string]): A list with the file path to all valid tiles if requested
         """
         tile_paths = [os.path.join(tile_folder, f) for f in os.listdir(tile_folder) if f.endswith('.tif')]
         valid_tiles = []
 
         for path in tqdm(tile_paths, desc="Validated tiles"):
-            with rasterio.open(path) as tile:
-                # Fetches the bounding box of the tile in coordinates:
-                bounds = tile.bounds
-                tile_box = box(*bounds)
-                # Checks if any buildings or roads overlaps with the tile:
-                for layer in self.geopackages:
-                    if self.geopackages[layer].intersects(tile_box).any():
-                        valid_tiles.append(path)
-                        break
+            if validate:
+                with rasterio.open(path) as tile:
+                    # Fetches the bounding box of the tile in coordinates:
+                    bounds = tile.bounds
+                    tile_box = box(*bounds)
+                    # Checks if any buildings or roads overlaps with the tile:
+                    for layer in self.geopackages:
+                        if self.geopackages[layer].intersects(tile_box).any():
+                            valid_tiles.append(path)
+                            break
+            else:
+                valid_tiles.append(path)
         
         return valid_tiles
 

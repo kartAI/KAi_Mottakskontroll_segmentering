@@ -18,7 +18,7 @@ from Functionality import generalFunctions as gf
 from Functionality.farSegModel import initialize_model
 from Functionality.geoTIFFandJPEG import imageSaver
 from Functionality.postProcessing import postProcessor
-from Functionality.preProcessing import preProcessor, tile_contains_valid_data
+from Functionality.preProcessing import preProcessor, tile_contains_valid_data, geotiff_to_geopackage
 
 # Function:
 
@@ -30,11 +30,24 @@ def mainInference():
     print()
     log_file = gf.get_valid_input("Where will you log the process (.log file): ", gf.resetFile)
     model_path = gf.get_valid_input("Path to your trained model: ", gf.doesPathExists)
-    geopackage_folder = gf.get_valid_input("Path to your geopackages: ", gf.doesPathExists)
+    geodata_folder = gf.get_valid_input("Where are the geographic data stored (the solution)(?): ", gf.doesPathExists)
     geotiff_folder = gf.get_valid_input("Path to your folder with orthophotos to be analyzed: ", gf.doesPathExists)
     tile_folder = gf.get_valid_input("Where would you like to store temporarly tiles(?): ", gf.emptyFolder)
     segmented_folder = gf.get_valid_input("Where would you like to store the segmented tiles(?): ", gf.emptyFolder)
     output_folder = gf.get_valid_input("Where would you like to store the final results(?): ", gf.emptyFolder)
+    # Loads the GeoPackages:
+    geodata_gpkg = [f for f in os.listdir(geodata_folder) if f.endswith('.gpkg')]
+    geodata_tif = [f for f in os.listdir(geodata_folder) if f.endswith('.tif') and f.replace('.tif', '.gpkg') not in geodata_gpkg]
+    # If some of the training data is stored as GeoTIFF format:
+    if len(geodata_tif) > 0:
+        for file in geodata_tif:
+            file = os.path.join(geodata_folder, file)
+            geotiff_to_geopackage(
+                file,
+                file.replace('.tif', '.gpkg'),
+                file.split('.')[0].split('/')[-1],
+                log_file
+            )
     # If you want jpg or not:
     choice = gf.get_valid_input("Do you want to save the results as .jpg files as well(?)(y/n): ", lambda x: gf.yesNo(x) is not None)
     choice = gf.yesNo(choice)
@@ -58,7 +71,7 @@ Saves as jpg as well: {choice}
     # Fetches GPU or CPU device:
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     gf.log_info(log_file, f"\nDevice: {device}\n")
-    geodata = gf.load_geopackages(geopackage_folder)
+    geodata = gf.load_geopackages(geodata_folder) # {"Building": [...], "Roads": [...], ...}
     original_crs = list(geodata.values())[0].crs
     # Load the trained model:
     num_classes = len(geodata) + 1

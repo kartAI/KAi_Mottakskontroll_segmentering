@@ -2,8 +2,8 @@
 
 # Libraries:
 
-import os
 import geopandas as gpd
+import os
 from shapely.validation import make_valid
 import shutil
 import sys

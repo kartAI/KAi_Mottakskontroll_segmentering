@@ -69,7 +69,7 @@ def train(model, train_loader, val_loader, criterion, optimizer, num_epochs, pat
         # Validate at the end of each epoch:
         avg_train_loss = epoch_loss / len(train_loader)
         avg_val_loss, avg_iou = validate(model, val_loader, criterion, device)
-        if log_file != None and (i+1) % 5 == 0:
+        if log_file != None and (i+1) % (num_epochs * 0.1) == 0:
             gf.log_info(
                 log_file,
                 f"""
@@ -79,17 +79,18 @@ Average validation loss: {avg_val_loss}
 Average IoU score: {avg_iou}
 """
             )
-        early_stopping(avg_val_loss, avg_train_loss, log_file=log_file)
+        early_stopping(avg_val_loss, log_file=log_file)
         torch.cuda.empty_cache()
         """
         if avg_iou > 0.85:
             early_stopping.early_stop = True
         """
         if early_stopping.early_stop:
-            gf.log_info(
-                log_file,
-                f"Stopped at epoch {i+1} with loss {early_stopping.best_score}"
-            )
+            if log_file != None:
+                gf.log_info(
+                    log_file,
+                    f"Stopped at epoch {i+1} with loss {early_stopping.best_score}"
+                )
             break
     if output:
         if early_stopping.best_score:

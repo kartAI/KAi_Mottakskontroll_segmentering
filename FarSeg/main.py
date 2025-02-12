@@ -37,4 +37,6 @@ Just write a number between 1-4 to choose action.
         stat = statistics(geopackages)
         stat.main()
 
+    print()
+    
     print("Thanks, and good bye!")

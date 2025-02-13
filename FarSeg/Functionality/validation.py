@@ -93,37 +93,40 @@ class validation():
         """
         gf.emptyFolder(mask_folder)
 
-        count_buildings = 0
-        count_roads = 0
-        mIoU_buildings = 0
-        mIoU_roads = 0
-
         imageHandler = imageSaver(self.geopackages)
 
-        for i in tqdm(range(len(self.originals)), desc="Images"):
-            gf.log_info(log_file, f"Image set: {i + 1}")
-            if check_geographic_overlap(self.originals[i], self.segmentations[i]):
-                imageHandler.createMaskGeoTIFF(self.originals[i], mask_folder)
-                mask = glob.glob(mask_folder + '/*.tif')[0]
-                if check_geographic_overlap(self.segmentations[i], mask):
-                    IoU_buildings, IoU_roads = calculate_IoU_between_masks(mask, self.segmentations[i])
-                    gf.log_info(log_file, f"Original file: {self.originals[i]}")
-                    gf.log_info(log_file, f"Segmented file: {self.segmentations[i]}")
-                    gf.log_info(log_file, f"Mask file: {mask}")
-                    if IoU_buildings != None:
-                        count_buildings += 1
-                        mIoU_buildings += IoU_buildings
-                        gf.log_info(log_file, f"IoU for buildings: {IoU_buildings}")
-                    if IoU_roads != None:
-                        count_roads += 1
-                        mIoU_roads += IoU_roads
-                        gf.log_info(log_file, f"IoU for roads: {IoU_roads}")
-            gf.emptyFolder(mask_folder)
-        gf.log_info(log_file, "\n#############\nTotal results:\n#############\n")
-        if count_buildings > 0:
-            gf.log_info(log_file, f"mIoU buildings: {mIoU_buildings / count_buildings}")
-        if count_roads > 0:
-            gf.log_info(log_file, f"mIoU roads: {mIoU_roads / count_roads}")
+        if len(self.originals) > 1:
+            merged_original = os.path.join(os.path.dirname(self.originals[0]), "merged_original.tif")
+            imageHandler.mergeGeoTIFFs(
+                self.originals,
+                merged_original
+            )
+        else:
+            merged_original = self.originals[0]
+        if len(self.segmentations) > 1:
+            merged_segmented = os.path.join(os.path.dirname(self.segmentations[0]), "merged_segmented.tif")
+            imageHandler.mergeGeoTIFFs(
+                self.segmentations,
+                merged_segmented
+            )
+        else:
+            merged_segmented = self.segmentations[0]
+
+        if check_geographic_overlap(merged_original, merged_segmented):
+            imageHandler.createMaskGeoTIFF(merged_original, mask_folder)
+            mask = glob.glob(mask_folder + '/*.tif')[0]
+            if check_geographic_overlap(merged_segmented, mask):
+                IoU_buildings, IoU_roads = calculate_IoU_between_masks(mask, merged_segmented)
+                gf.log_info(log_file, f"Original file: {merged_original}")
+                gf.log_info(log_file, f"Segmented file: {merged_segmented}")
+                gf.log_info(log_file, f"Mask file: {mask}")
+                if IoU_buildings != None or IoU_roads != None:
+                    gf.log_info(log_file, "\n#############\nTotal results:\n#############\n")
+                if IoU_buildings != None:
+                    gf.log_info(log_file, f"IoU for buildings: {IoU_buildings}")
+                if IoU_roads != None:
+                    gf.log_info(log_file, f"IoU for roads: {IoU_roads}")
+        gf.emptyFolder(mask_folder)
 
 # Helper functions:
 

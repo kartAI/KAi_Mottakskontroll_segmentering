@@ -7,6 +7,7 @@ import os
 from PIL import Image
 import rasterio
 from rasterio.features import rasterize
+from rasterio.merge import merge
 
 import generalFunctions as gf
 
@@ -183,3 +184,29 @@ class imageSaver():
         with rasterio.open(output, 'w', **profile) as dst:
             for band in range(3):
                 dst.write(image_array[:, :, band], band + 1)
+
+    def mergeGeoTIFFs(self, paths, output_path):
+        """
+        Merges all the GeoTIFFs into one bigger one.
+
+        Args:
+            paths (list[string]): A list containing the paths to all the GeoTIFFs to be merged
+            output_path (string): The path to save the model
+        """
+        src_files = [rasterio.open(path) for path in paths]
+        print(f"Number of files: {len(src_files)}.")
+        # Merge raster
+        mosaic, transform = merge(src_files)
+        print("Files merged.")
+        # Get the metadata of the first GeoTIFF
+        meta = src_files[0].meta.copy()
+        meta.update({
+            "driver": "GTiff",
+            "height": mosaic.shape[1],
+            "width": mosaic.shape[2],
+            "transform": transform
+        })
+        with rasterio.open(output_path, "w", **meta) as dest:
+            dest.write(mosaic)
+        for src in src_files:
+            src.close()

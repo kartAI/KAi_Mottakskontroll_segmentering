@@ -25,6 +25,7 @@ def mainTrain():
     """
     Performs the main part of training a new FarSeg model.
     """
+    torch.cuda.empty_cache()
     print()
     log_file = gf.get_valid_input("Where will you log the process (.log file): ", gf.resetFile)
     # Folder with geographic data (buildings and roads):
@@ -61,7 +62,6 @@ def mainTrain():
     # Validation element:
     tileContainer = tileValidation(geodata_folder)
     # Initialize model, loss function and optimizer:
-    torch.cuda.empty_cache()
     model, criterion, optimizer = initialize_model(num_classes, lr=learning_rate)
     # Initializes the pre-processing element:
     preProcessing = preProcessor(val_split, tile_folder)
@@ -69,7 +69,7 @@ def mainTrain():
     # Give a name for the trained model:
     model_path = gf.get_valid_input("Where will you save the model(?): ", gf.emptyFolder)
     model_name = input("Give the model a name (ends with '.pth'): ")
-    choice = gf.get_valid_input("Do you want to train the model only on valid tiles(?)(y/n): ", lambda x: gf.yesNo(x) is not None)
+    choice = gf.get_valid_input("Do you want to train the model on valid tiles only(?)(y/n): ", lambda x: gf.yesNo(x) is not None)
     choice = gf.yesNo(choice)
     print()
 

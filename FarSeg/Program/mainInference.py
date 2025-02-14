@@ -78,11 +78,10 @@ Saves as jpg as well: {choice}
     model, _, _ = initialize_model(num_classes)
     model.load_state_dict(torch.load(model_path, weights_only=True)) # Loads the model from the saved file
     model = model.to(device)
-    # Generate a color map for the specified number of classes:
+    # Color map for background and segmented:
     color_map = {
-        0: [0, 0, 0],    # Background - Black
-        1: [255, 0, 0],  # Buildings  - Red
-        2: [255, 255, 0] # Roads      - Yellow
+        0: [  0,   0,   0], # Background - Black
+        1: [255, 255, 255]  # Segmented  - White
     }
     # Converts the color map dictionary to a NumPy array:
     colors = np.array([color_map[i] for i in range(num_classes)], dtype=np.uint8) # Returns RGB colors

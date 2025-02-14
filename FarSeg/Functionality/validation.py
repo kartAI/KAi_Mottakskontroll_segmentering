@@ -116,16 +116,21 @@ class validation():
             imageHandler.createMaskGeoTIFF(merged_original, mask_folder)
             mask = glob.glob(mask_folder + '/*.tif')[0]
             if check_geographic_overlap(merged_segmented, mask):
-                IoU_buildings, IoU_roads = calculate_IoU_between_masks(mask, merged_segmented)
+                IoU = calculate_IoU_between_masks(mask, merged_segmented)
                 gf.log_info(log_file, f"Original file: {merged_original}")
                 gf.log_info(log_file, f"Segmented file: {merged_segmented}")
                 gf.log_info(log_file, f"Mask file: {mask}")
-                if IoU_buildings != None or IoU_roads != None:
-                    gf.log_info(log_file, "\n#############\nTotal results:\n#############\n")
-                if IoU_buildings != None:
-                    gf.log_info(log_file, f"IoU for buildings: {IoU_buildings}")
-                if IoU_roads != None:
-                    gf.log_info(log_file, f"IoU for roads: {IoU_roads}")
+                if IoU:
+                    gf.log_info(
+                        log_file,
+                        f"""
+##############
+Total results:
+#############
+
+IoU score: {IoU}
+"""
+)
         gf.emptyFolder(mask_folder)
 
 # Helper functions:
@@ -154,23 +159,21 @@ def check_geographic_overlap(original_file, segmented_file):
         print(f"An error occured: {e}")
         return False
 
-def get_build_and_road_pixels(file):
+def get_segmented_pixels(file):
     """
-    Divides the pixels in the image marked as buildings and roads.
+    Fetches the segmented pixels in the image.
 
     Args:
         file (string): File path to the image
 
     Returns:
-        buildings (ndarray): A numpy array representing the building rasters
-        roads (ndarray): A numpy array representing the road rasters
+        segmented (ndarray): A numpy array representing the segmented pixels
     """
     with rasterio.open(file) as dataset:
         rgb = dataset.read([1, 2, 3]).transpose([1, 2, 0])
-        buildings = np.all(rgb == [255, 0, 0], axis = -1)
-        roads = np.all(rgb == [255, 255, 0], axis = -1)
+        segmented = np.all(rgb == [255, 255, 255], axis = -1)
     
-    return buildings, roads
+    return segmented
 
 def compute_IoU(mask1, mask2):
     """
@@ -194,7 +197,7 @@ def compute_IoU(mask1, mask2):
 
 def calculate_IoU_between_masks(mask, prediction):
     """
-    Calculates the IoU value of buildings and roads between the mask
+    Calculates the IoU value of the segmented area between the mask
     and prediction of the same area.
 
     Args:
@@ -202,17 +205,13 @@ def calculate_IoU_between_masks(mask, prediction):
         prediction (string): File path to the GeoTIFF representing the prediction
     
     Returns:
-        iou_buildings (None, float): Float value of the IoU score for buildings, default None
-        iou_roads (None, float): Float value of the IoU score for roads, default None
+        iou (None, float): Float value of the IoU score of the segmentations, default None
     """
-    building1, road1 = get_build_and_road_pixels(mask)
-    building2, road2 = get_build_and_road_pixels(prediction)
-    iou_buildings = None
-    iou_roads = None
+    segmented1 = get_segmented_pixels(mask)
+    segmented2 = get_segmented_pixels(prediction)
+    iou = None
 
-    if np.any(building1):
-        iou_buildings = compute_IoU(building1, building2)
-    if np.any(road1):
-        iou_roads = compute_IoU(road1, road2)
+    if np.any(segmented1):
+        iou = compute_IoU(segmented1, segmented2)
     
-    return iou_buildings, iou_roads
+    return iou

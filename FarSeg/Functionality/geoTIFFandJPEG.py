@@ -210,3 +210,34 @@ class imageSaver():
             dest.write(mosaic)
         for src in src_files:
             src.close()
+
+    def generate_comparison_GeoTIFF(self, segmentation_path, mask_path, output_path):
+        """
+        Function that generates a new GeoTIFF with colors representing the precision of the segmentation and returns the number of true / false positives / negatives.
+
+        Args:
+            segmentation_path (string): Path to the segmented GeoTIFF
+            mask_path (string): Path to the correct mask (solution)
+            output_path (string): Path to save the new GeoTIFF
+
+        Returns:
+            tp, tn, fp, fn (int): Number of True Positives, True Negatives, False Positives, False Negatives
+        """
+        with rasterio.open(segmentation_path) as seg, rasterio.open(mask_path) as mask:
+            seg_data = (seg.read(1) >= 140).astype(np.uint8)
+            mask_data = (mask.read(1) > 0).astype(np.uint8)
+            colors = { # [R,G,B,A]
+                (1, 1): [  0, 255, 0, 255], # Green (True Positives)
+                (1, 0): [255,   0, 0, 255], # Red (False Positives)
+                (0, 1): [255, 165, 0, 255], # Orange (False Negatives)
+                (0, 0): [  0,   0, 0, 255]  # Black (True Negatives)
+            }
+            output_image = np.zeros((4, seg.height, seg.width), dtype=np.uint8)
+            for (s, m), color in colors.items():
+                mask_indices = (seg_data == s) & (mask_data == m)
+                for i in range(4):
+                    output_image[i][mask_indices] = color[i]
+            profile = seg.profile
+            profile.update(count=4, dtype=np.uint8)
+            with rasterio.open(output_path, "w", **profile) as dst:
+                dst.write(output_image)

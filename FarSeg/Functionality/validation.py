@@ -92,8 +92,20 @@ class validation():
             log_file (string): Path to a new logfile to be generated
         """
         gf.emptyFolder(mask_folder)
+        gf.emptyFolder(mask_folder + "_final")
 
         imageHandler = imageSaver(self.geopackages)
+
+        if len(self.originals) == len(self.segmentations):
+            for i in tqdm(range(len(self.originals))):
+                imageHandler.createMaskGeoTIFF(self.originals[i], mask_folder)
+                mask = glob.glob(mask_folder + '/*.tif')[0]
+                imageHandler.generate_comparison_GeoTIFF(
+                    self.segmentations[i],
+                    mask,
+                    os.path.join(mask_folder + "_final", f"Compared_mask_{i+1}.tif")
+                )
+                gf.emptyFolder(mask_folder)
 
         if len(self.originals) > 1:
             merged_original = os.path.join(os.path.dirname(self.originals[0]), "merged_original.tif")

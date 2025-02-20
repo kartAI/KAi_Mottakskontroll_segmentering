@@ -96,16 +96,24 @@ class validation():
 
         imageHandler = imageSaver(self.geopackages)
 
+        tp, tn, fp, fn = 0, 0, 0, 0
+
         if len(self.originals) == len(self.segmentations):
             for i in tqdm(range(len(self.originals))):
                 imageHandler.createMaskGeoTIFF(self.originals[i], mask_folder)
                 mask = glob.glob(mask_folder + '/*.tif')[0]
-                imageHandler.generate_comparison_GeoTIFF(
+                v1, v2, v3, v4 = imageHandler.generate_comparison_GeoTIFF(
                     self.segmentations[i],
                     mask,
                     os.path.join(mask_folder + "_final", f"Compared_mask_{i+1}.tif")
                 )
+                tp += v1
+                tn += v2
+                fp += v3
+                fn += v4
                 gf.emptyFolder(mask_folder)
+
+        total = tp + tn + fp + fn
 
         if len(self.originals) > 1:
             merged_original = os.path.join(os.path.dirname(self.originals[0]), "merged_original.tif")
@@ -141,6 +149,13 @@ Total results:
 #############
 
 IoU score: {IoU}
+True positives: {tp/total}
+True negatives: {tn/total}
+False positives: {fp/total}
+False negatives: {fn/total}
+Precision: {tp/(tp + fp)} (How many retrieved pixels are relevant?)
+Recall: {tp/(tp+fn)} (How many relevant pixels are retrieved?)
+F1: {2 * tp /(2 * tp + fp + fn)} (Harmonic mean of precision and recall)
 """
 )
         gf.emptyFolder(mask_folder)

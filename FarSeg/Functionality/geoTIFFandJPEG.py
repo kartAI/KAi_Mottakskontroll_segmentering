@@ -232,6 +232,17 @@ class imageSaver():
                 (0, 1): [255, 165, 0, 255], # Orange (False Negatives)
                 (0, 0): [  0,   0, 0, 255]  # Black (True Negatives)
             }
+            tp_mask = (seg_data == 1) & (mask_data == 1)
+            fp_mask = (seg_data == 1) & (mask_data == 0)
+            fn_mask = (seg_data == 0) & (mask_data == 1)
+            tn_mask = (seg_data == 0) & (mask_data == 0)
+
+            # Fetches statistical values:
+            tp = np.count_nonzero(tp_mask)
+            fp = np.count_nonzero(fp_mask)
+            fn = np.count_nonzero(fn_mask)
+            tn = np.count_nonzero(tn_mask)
+
             output_image = np.zeros((4, seg.height, seg.width), dtype=np.uint8)
             for (s, m), color in colors.items():
                 mask_indices = (seg_data == s) & (mask_data == m)
@@ -241,3 +252,5 @@ class imageSaver():
             profile.update(count=4, dtype=np.uint8)
             with rasterio.open(output_path, "w", **profile) as dst:
                 dst.write(output_image)
+        
+        return tp, tn, fp, fn

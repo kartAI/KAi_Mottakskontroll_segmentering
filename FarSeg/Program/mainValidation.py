@@ -25,6 +25,17 @@ def mainValidation():
     geodata_folder = gf.get_valid_input("Where are the geographic data stored (the solution)(?): ", gf.doesPathExists)
     mask_folder = gf.get_valid_input("Where would you store temporarly masks(?): ", gf.emptyFolder)
     log_file = gf.get_valid_input("Write the path of the log file that will contain the results: ", gf.resetFile)
+    isRoad = gf.get_valid_input("Are you analysing roads(?)(y/n): ", lambda x: gf.yesNo(x) is not None)
+    isRoad = gf.yesNo(isRoad)
+    save = gf.get_valid_input("Do you want to save the files as GeoJSON(?)(y/n): ", lambda x: gf.yesNo(x) is not None)
+    save = gf.yesNo(save)
+    if save:
+        output_geojson = gf.get_valid_input("Where would you store the GeoJSON files(?): ", gf.emptyFolder)
+        zone = gf.get_valid_input("Which UTM zone are the GeoTIFFs(?) ", gf.correctUTMZone)
+        utmOrLatLon = gf.get_valid_input("Will you store the data in the GeoJSON files in latlon coordinates(?)(y/n): ", lambda x: gf.yesNo(x) is not None)
+        utmOrLatLon = gf.yesNo(utmOrLatLon)
+    else:
+        output_geojson, zone, utmOrLatLon = None, None, None
     print()
     # Loads the geopackages:
     geodata_gpkg = [f for f in os.listdir(geodata_folder) if f.endswith('.gpkg')]
@@ -41,7 +52,7 @@ def mainValidation():
             )
     # Validates the data:
     validator = validation(result_folder, geodata_folder)
-    validator.validate(mask_folder, log_file)
+    validator.validate(mask_folder, log_file, isRoad, save, output_geojson, zone, utmOrLatLon)
     # Deletes unnecessary data:
     if os.path.exists(mask_folder):
         shutil.rmtree(mask_folder)

@@ -99,7 +99,7 @@ def emptyFolder(input):
 
 def resetFile(input):
     """
-    Deletesthe file given as an input string from the user, if it exists, and creates a new , empty one.
+    Deletes the file given as an input string from the user, if it exists, and creates a new , empty one.
 
     Args:
         input (string): Input path to the new file given by the user
@@ -118,6 +118,19 @@ def resetFile(input):
         return True
     except Exception as e:
         print(f"An error occurred during deletion/creation of the file '{input}': {e}")
+
+def correctUTMZone(zone):
+    """
+    Checks if the input zone is a valid zone for UTM in Norway.
+
+    Arguments:
+        zone (string): UTM zone given as user input
+
+    Returns:
+        bool: True is valid zone, False otherwise
+    """
+    valid_zones = ["32N", "33N", "35N"]
+    return zone in valid_zones
 
 def load_geopackages(folder):
     """

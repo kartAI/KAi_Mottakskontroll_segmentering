@@ -11,6 +11,7 @@ from tqdm import tqdm
 
 import generalFunctions as gf
 from geoTIFFandJPEG import imageSaver
+import vectorization as V
 
 # Classes:
 
@@ -82,7 +83,7 @@ class validation():
         self.segmentations = [pred for pred in predictions if 'segmented' in pred]
         self.geopackages = geopackage_folder
 
-    def validate(self, mask_folder, log_file):
+    def validate(self, mask_folder, log_file, isRoad, save, output_geojson, zone, utmOrLatLon):
         """
         Performs the validation of the predicted segmentations.
         Writes the validation results to a specified log file.
@@ -90,6 +91,11 @@ class validation():
         Args:
             mask_folder (string): Path to a new folder where the masks are temporarly stored
             log_file (string): Path to a new logfile to be generated
+            isRoad (bool): If True, the segmentation data is for roads, False otherwise
+            save (bool): If True, the function saves the vector data in GeoJSON files
+            output_geojson (string): Path to the folder where the GeoJSON files will be saved
+            zone (string): The UTM zone of the GeoTIFFs
+            utmOrLatLon (bool): If True, the coordinates are converted to latlon, otherwise UTM coordinates are kept
         """
         gf.emptyFolder(mask_folder)
         gf.emptyFolder(mask_folder + "_final")
@@ -97,9 +103,10 @@ class validation():
         imageHandler = imageSaver(self.geopackages)
 
         tp, tn, fp, fn = 0, 0, 0, 0
+        mask_lines, mask_boundaries, segmented_lines, segmented_boundaries = 0, 0, 0, 0
 
         if len(self.originals) == len(self.segmentations):
-            for i in tqdm(range(len(self.originals))):
+            for i in tqdm(range(len(self.originals)), desc="Calculating statistic", colour="green"):
                 imageHandler.createMaskGeoTIFF(self.originals[i], mask_folder)
                 mask = glob.glob(mask_folder + '/*.tif')[0]
                 v1, v2, v3, v4 = imageHandler.generate_comparison_GeoTIFF(
@@ -111,6 +118,11 @@ class validation():
                 tn += v2
                 fp += v3
                 fn += v4
+                if isRoad:
+                    mask_lines += V.createCenterLines(mask, False, output_geojson, zone, utmOrLatLon, log_file) # Does not save GeoJSON of solution
+                    segmented_lines += V.createCenterLines(self.segmentations[i], save, output_geojson, zone, utmOrLatLon, log_file, count=i)
+                mask_boundaries += V.createBoundaries(mask, False, output_geojson, zone, utmOrLatLon, log_file) # Does not save GeoJSON of solution
+                segmented_boundaries += V.createBoundaries(self.segmentations[i], save, output_geojson, zone, utmOrLatLon, log_file, count=i)
                 gf.emptyFolder(mask_folder)
 
         total = tp + tn + fp + fn
@@ -133,10 +145,13 @@ class validation():
             merged_segmented = self.segmentations[0]
 
         if check_geographic_overlap(merged_original, merged_segmented):
+            print("Merged GeoTIFFs overlap.")
             imageHandler.createMaskGeoTIFF(merged_original, mask_folder)
             mask = glob.glob(mask_folder + '/*.tif')[0]
             if check_geographic_overlap(merged_segmented, mask):
+                print("Segmentations and masks overlap.")
                 IoU = calculate_IoU_between_masks(mask, merged_segmented)
+                print("IoU calculated.")
                 gf.log_info(log_file, f"Original file: {merged_original}")
                 gf.log_info(log_file, f"Segmented file: {merged_segmented}")
                 gf.log_info(log_file, f"Mask file: {mask}")
@@ -156,9 +171,15 @@ False negatives: {fn/total}
 Precision: {tp/(tp + fp)} (How many retrieved pixels are relevant?)
 Recall: {tp/(tp+fn)} (How many relevant pixels are retrieved?)
 F1: {2 * tp /(2 * tp + fp + fn)} (Harmonic mean of precision and recall)
+Total length of boundaries (segmented / correct): {segmented_boundaries} / {mask_boundaries} = {segmented_boundaries / mask_boundaries}
+{f'Total length of centerlines (segmented / correct): {segmented_lines} / {mask_lines} = {segmented_lines / mask_lines}' if isRoad else ''}
 """
 )
         gf.emptyFolder(mask_folder)
+        if os.path.exists(merged_original):
+            os.remove(merged_original)
+        if os.path.exists(merged_segmented):
+            os.remove(merged_segmented)
 
 # Helper functions:
 

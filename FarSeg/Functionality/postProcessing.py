@@ -23,7 +23,7 @@ class postProcessor():
         """
         Creates an instance of postProcessor.
 
-        Args:
+        Arguments:
             geotiff_folder (string): Path to the folder containing all the original aerial imageas as GeoTIFFs
             segmented_folder (string): Path to the folder containing all the segmented images as GeoTIFFs
         """
@@ -36,7 +36,7 @@ class postProcessor():
         crops the merged image to the specified original size,
         and converts it to .jpg as well, if requested.
 
-        Args:
+        Arguments:
             original (string): File path and name of the merged, original output file (aerial image) as .tif file
             segmented (string): File path and name of the merged, segmented output file (segmented image) as .tif file
             original_size (tuple): (height, width) in pixels for cropping the final image
@@ -54,8 +54,8 @@ class postProcessor():
         # Parse filenames to extract grid positions:
         tile_positions = [parse_tile_filename(f) for f in geotiffs]
         # Determine grid dimensions:
-        max_row = max(row for row, col in tile_positions)
-        max_col = max(col for row, col in tile_positions)
+        max_row = max(row for row, _ in tile_positions)
+        max_col = max(col for _, col in tile_positions)
         rows, cols = max_row + 1, max_col + 1
         # Use the first tile to define dimensions and metadata:
         imageHandler = imageSaver()
@@ -116,7 +116,7 @@ def parse_tile_filename(filename, segmented=False):
     Checks for consistency in file name
     and returns the row and column of the tile in the image.
 
-    Args:
+    Arguments:
         filename (string): Filename to be checked
         segmented (bool): Check if it is segmented or original file, default False
     

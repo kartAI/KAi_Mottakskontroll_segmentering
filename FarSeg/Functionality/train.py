@@ -16,7 +16,7 @@ def train(model, train_loader, val_loader, criterion, optimizer, num_epochs, pat
     """
     Training loop for FarSeg segmentation model.
 
-    Args:
+    Arguments:
         model (torch.models.FarSeg): Model to be trained
         train_loader (DataLoader): The data used to train the model
         val_loader (DataLoader): The data used to validate the model
@@ -38,7 +38,7 @@ def train(model, train_loader, val_loader, criterion, optimizer, num_epochs, pat
     criterion = criterion.to(device)
     scaler = torch.amp.GradScaler()
     early_stopping = EarlyStopping(patience=patience, min_delta=min_delta, save_path=save_path, model=model)
-    for i in tqdm(range(num_epochs), desc='Epochs'):
+    for i in tqdm(range(num_epochs), desc='Epochs', colour="green", leave=False):
         epoch_loss = 0
         model.train()
         for batch_idx, (images, masks) in enumerate(train_loader, 1):
@@ -101,7 +101,7 @@ def validate(model, val_loader, criterion, device):
     """
     Validation loop during training of FarSeg segmentation model.
 
-    Args:
+    Arguments:
         model (torch.models.FarSeg): Model to be trained
         val_loader (DataLoader): The data used to validate the model
         criterion (torch.nn.CrossEntropyLoss): The loss function used for training, suitable for multi-class classification tasks

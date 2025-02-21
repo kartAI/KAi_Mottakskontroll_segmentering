@@ -21,7 +21,7 @@ def grid_search_training(hyperparameter_grid, geotiffs, geopackages, tile_folder
     """
     Performs grid search for hyperparameter optimization.
 
-    Args:
+    Arguments:
         hyperparameter_grid (dict): Dictionary containinghyperparameters to test
         geotiffs (string): Path to GeoTIFFs for training
         geopackages (string): Path to folder with geopackages
@@ -130,10 +130,10 @@ if __name__ == '__main__':
     }
 
     # Defines paths to the data:
-    geopackages = 'C:/Jakob_Marianne_2024_2025/WH/1_The_two-period_image_data/2012/whole_image/train/label'
-    train_files = 'C:/Jakob_Marianne_2024_2025/WH/1_The_two-period_image_data/2012/whole_image/train/image'
-    tile_folder = 'C:/Users/jshjelse/Documents/Tiles'
-    log_file = 'C:/Users/jshjelse/Documents/FineTuning_NZ_1.log'
+    geopackages = '...'
+    train_files = '...'
+    tile_folder = '...'
+    log_file = '...'
 
     gf.emptyFolder(tile_folder)
 

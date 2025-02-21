@@ -34,7 +34,7 @@ class statistics():
         """
         Creates a new instance of statistics.
 
-        Args:
+        Argument:
             geopackages (string): Path to the folder containing geopackages
         """
         self.total_tiles = 0
@@ -88,7 +88,7 @@ class statistics():
         """
         Creates the relevant statistics.
 
-        Args:
+        Arguments:
             geotiffs (string): Path to the folder containing all the GeoTIFFs used in the process
             tile_folder (string): Path to the folder for the temporarly tiles
         """

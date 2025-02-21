@@ -5,6 +5,7 @@
 import os
 import shutil
 import sys
+from tqdm import tqdm
 
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(project_root)
@@ -42,7 +43,7 @@ def mainValidation():
     geodata_tif = [f for f in os.listdir(geodata_folder) if f.endswith('.tif') and f.replace('.tif', '.gpkg') not in geodata_gpkg]
     # If some of the training data is stored as GeoTIFF format:
     if len(geodata_tif) > 0:
-        for file in geodata_tif:
+        for file in tqdm(geodata_tif, desc="GeoTIFFs to GeoPackage", colour="yellow"):
             file = os.path.join(geodata_folder, file)
             geotiff_to_geopackage(
                 file,

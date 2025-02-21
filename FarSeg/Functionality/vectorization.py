@@ -41,7 +41,7 @@ def convert_coords(geom, src, zone, utmOrLatLon):
         for x, y in geom.coords:
             utm_x, utm_y = src.xy(y, x)
             if utmOrLatLon:
-                lon, lat = C.UTMtoLatLon(utm_y, utm_x, zone)
+                lat, lon = C.UTMtoLatLon(utm_y, utm_x, zone)
                 coords.append((lon, lat))
             else:
                 coords.append((utm_y, utm_x))
@@ -49,7 +49,7 @@ def convert_coords(geom, src, zone, utmOrLatLon):
     elif isinstance(geom, Point):
         utm_x, utm_y = src.xy(geom.y, geom.x)
         if utmOrLatLon:
-            lon, lat = C.UTMtoLatLon(utm_y, utm_x, zone)
+            lat, lon = C.UTMtoLatLon(utm_y, utm_x, zone)
             return Point(lon, lat)
         else:
             return Point(utm_y, utm_x)
@@ -118,7 +118,7 @@ def createCenterLines(input_geotiff, save, output_geojson, zone, utmOrLatLon, lo
 
     # Step 4: Create graph and intersections
     G = nx.Graph()
-    for line in tqdm(lines, desc="Processing lines", colour="green"):
+    for line in tqdm(lines, desc="Processing lines", colour="green", leave=False):
         for p1, p2 in zip(line.coords[:-1], line.coords[1:]):
             G.add_edge(p1, p2)
     intersection_points = [Point(n) for n, d in G.degree() if d > 2]
@@ -126,8 +126,13 @@ def createCenterLines(input_geotiff, save, output_geojson, zone, utmOrLatLon, lo
     # Step 5: Snap poorly segmented areas
     all_lines = unary_union(lines)
     lines = [snap(line, all_lines, 5) for line in lines]
+
+    # Step 6: Calculate total length
+    total_distance = 0
+    for line in tqdm(lines, desc="Calculate length", colour="green", leave=False):
+        total_distance += line.length
     
-    # Step 6 (optional): Convert to GeoJSON format and save to file
+    # Step 7 (optional): Convert to GeoJSON format and save to file
     if save:
         lines = [convert_coords(line, data, zone, utmOrLatLon) for line in lines]
         intersection_points = [convert_coords(p, data, zone, utmOrLatLon) for p in intersection_points]
@@ -140,11 +145,6 @@ def createCenterLines(input_geotiff, save, output_geojson, zone, utmOrLatLon, lo
 
         gf.log_info(log_file, f"Centerlines saved to {line_file}.")
         gf.log_info(log_file, f"Intersections saved to {intersection_file}.")
-    
-    # Step 7: Calculate total length
-    total_distance = 0
-    for line in tqdm(lines, desc="Calculate length", colour="green"):
-        total_distance += line.length
     
     return total_distance
 
@@ -176,7 +176,7 @@ def createBoundaries(input_geotiff, save, output_geojson, zone, utmOrLatLon, log
 
     # Step 2: Create boundaries (edges) of polygons
     boundaries = []
-    for geom, value in tqdm(shapes(labelled_array, mask=mask), desc="Creating boundaries", colour="green"):
+    for geom, value in tqdm(shapes(labelled_array, mask=mask), desc="Creating boundaries", colour="green", leave=False):
         if value > 0:
             poly = shape(geom)
             if poly.area > min_size:
@@ -188,7 +188,12 @@ def createBoundaries(input_geotiff, save, output_geojson, zone, utmOrLatLon, log
     # Step 3: Convert boundaries to LineString
     boundaries = [LineString(boundary.coords) for boundary in boundaries]
 
-    # Step 4 (optional): Change coordinates for GeoJSON output, prepare GeoJSON data and save to file
+    # Step 4: Calculates total length of boundaries
+    total_distance = 0
+    for boundary in boundaries:
+        total_distance += boundary.length
+
+    # Step 5 (optional): Change coordinates for GeoJSON output, prepare GeoJSON data and save to file
     if save:
         boundaries = [convert_coords(boundary, data, zone, utmOrLatLon) for boundary in boundaries]
 
@@ -197,10 +202,5 @@ def createBoundaries(input_geotiff, save, output_geojson, zone, utmOrLatLon, log
         save_JSON(boundaries, boundary_file)
 
         gf.log_info(log_file, f"Boundaries saved to {boundary_file}")
-    
-    # Step 5: Calculates total length of boundaries
-    total_distance = 0
-    for boundary in boundaries:
-        total_distance += boundary.length
     
     return total_distance

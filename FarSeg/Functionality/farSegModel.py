@@ -35,7 +35,7 @@ class EarlyStopping():
         """
         Creates a new instance of EarlyStopping.
 
-        Args:
+        Arguments:
             patience (int): Number of epochs to wait before stopping early
             min_delta (flaot): Minimum improvement in the monitored metric required to continue
             save_path (string): Path to save the best model weights
@@ -56,7 +56,7 @@ class EarlyStopping():
         Counts the number of epochs until the patience is passed and
         change early_stop, that will stop the training loop.
 
-        Args:
+        Arguments:
             val_loss (float): Loss value of the last validation
             train_loss (float): Loss value of the last training session
             log_file (string): Path to the log file to log proress, default None
@@ -88,7 +88,7 @@ class EarlyStopping():
         """
         Saves the best model weights
 
-        Args:
+        Argument:
             log_file (string): Path to the log file to log proress, default None
         """
         if self.model != None and self.save_path != None:
@@ -114,7 +114,7 @@ class geotiffStopping():
         """
         Creates a new instance of geotiffStopping.
 
-        Args:
+        Arguments:
             patience (int): Number of epochs to wait before stopping early
             min_delta (flaot): Minimum improvement in the monitored metric required to continue
             window_size (int): Number of GeoTIFFs to consider in the early stop process, default 5
@@ -134,7 +134,7 @@ class geotiffStopping():
         Counts the number of GeoTIFFs until the patience is passed and
         change early_stop, that will stop the training loop.
 
-        Args:
+        Arguments:
             val_loss (float): Loss values of the last validation
             log_file (string): Path to the log file to log proress, default None
         """
@@ -161,7 +161,7 @@ def initialize_model(num_classes, lr=1e-4):
     """
     Initialize the FarSeg model with optimizer and loss function.
 
-    Args:
+    Arguments:
         num_classes (int): Number of classes to segment
         lr (float): Learning rate of the model, default = 1e-4
     

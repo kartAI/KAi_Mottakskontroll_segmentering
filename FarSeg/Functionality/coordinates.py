@@ -9,7 +9,7 @@ import numpy as np
 """
 Functions converting between radians and degrees.
 
-Arg:
+Argument:
     x (float): Angle in radians or degrees
 
 Returns:
@@ -26,7 +26,7 @@ def UTMtoLatLon(x, y, zone):
     """
     Converts coordinates from UTM North (x) and East (y) to latitude and longitude.
 
-    Args:
+    Arguments:
         x (float): North coordinate in UTM
         y (float): East coordinate in UTM
         zone (string): String describing the UTM zone

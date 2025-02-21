@@ -39,7 +39,7 @@ def mainTrain():
     geodata_tif = [f for f in os.listdir(geodata_folder) if f.endswith('.tif') and f.replace('.tif', '.gpkg') not in geodata_gpkg]
     # If some of the training data is stored as GeoTIFF format:
     if len(geodata_tif) > 0:
-        for file in geodata_tif:
+        for file in tqdm(geodata_tif, desc="GeoTIFFs to GeoPackage", colour="yellow"):
             file = os.path.join(geodata_folder, file)
             geotiff_to_geopackage(
                 file,
@@ -108,7 +108,7 @@ The model will train on valid tiles only: {choice}
     counter = 1
 
     # Loops through each GeoTIFF file:
-    for tif in tqdm(tif_files, 'GeoTIFF files'):
+    for tif in tqdm(tif_files, desc='GeoTIFF files', colour="yellow"):
         gf.log_info(log_file, f"\nTraining on GeoTIFF #{counter}\n")
         # Step 1: Generate tile for the current GeoTIFF
         preProcessing.generate_tiles(tif)

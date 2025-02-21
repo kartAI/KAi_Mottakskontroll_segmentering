@@ -11,6 +11,7 @@ from tqdm import tqdm
 
 import generalFunctions as gf
 from geoTIFFandJPEG import imageSaver
+import vectorization as V
 
 # Classes:
 
@@ -18,7 +19,7 @@ class tileValidation():
     """
     Instance validating tiles of images to use for DL training.
 
-    Attributes:
+    Attribute:
         folder (string): Path to the folder containing relevant geopackage data
     """
 
@@ -26,7 +27,7 @@ class tileValidation():
         """
         Creates a new instance of tileValidation.
 
-        Args:
+        Argument:
             folder (string): Path to the folder containing relevant geopackage data
         """
         self.geopackages = gf.load_geopackages(folder)
@@ -35,7 +36,7 @@ class tileValidation():
         """
         Validates the tiles depending on overlap with geopackages.
 
-        Args:
+        Arguments:
             tile_folder (string): Path to the folder containing the GeoTIFFs
             validate (bool): Wether or not to validate the tiles
         
@@ -45,7 +46,7 @@ class tileValidation():
         tile_paths = [os.path.join(tile_folder, f) for f in os.listdir(tile_folder) if f.endswith('.tif')]
         valid_tiles = []
 
-        for path in tqdm(tile_paths, desc="Validated tiles"):
+        for path in tqdm(tile_paths, desc="Validated tiles", colour="green", leave=False):
             if validate:
                 with rasterio.open(path) as tile:
                     # Fetches the bounding box of the tile in coordinates:
@@ -65,7 +66,7 @@ class validation():
     """
     Instance validating the final results from the DL inference.
 
-    Attributes:
+    Attribute:
         folder (string): Path to the result folder were original and segmented images are stored
     """
 
@@ -73,7 +74,7 @@ class validation():
         """
         Creates a new instance of validation.
 
-        Args:
+        Arguments:
             folder (string): Path to the result folder were original and segmented images are stored
             geopakage_folder (string): Path to the geopackage data used in the validation
         """
@@ -82,14 +83,19 @@ class validation():
         self.segmentations = [pred for pred in predictions if 'segmented' in pred]
         self.geopackages = geopackage_folder
 
-    def validate(self, mask_folder, log_file):
+    def validate(self, mask_folder, log_file, isRoad, save, output_geojson, zone, utmOrLatLon):
         """
         Performs the validation of the predicted segmentations.
         Writes the validation results to a specified log file.
 
-        Args:
+        Arguments:
             mask_folder (string): Path to a new folder where the masks are temporarly stored
             log_file (string): Path to a new logfile to be generated
+            isRoad (bool): If True, the segmentation data is for roads, False otherwise
+            save (bool): If True, the function saves the vector data in GeoJSON files
+            output_geojson (string): Path to the folder where the GeoJSON files will be saved
+            zone (string): The UTM zone of the GeoTIFFs
+            utmOrLatLon (bool): If True, the coordinates are converted to latlon, otherwise UTM coordinates are kept
         """
         gf.emptyFolder(mask_folder)
         gf.emptyFolder(mask_folder + "_final")
@@ -97,9 +103,10 @@ class validation():
         imageHandler = imageSaver(self.geopackages)
 
         tp, tn, fp, fn = 0, 0, 0, 0
+        mask_lines, mask_boundaries, segmented_lines, segmented_boundaries = 0, 0, 0, 0
 
         if len(self.originals) == len(self.segmentations):
-            for i in tqdm(range(len(self.originals))):
+            for i in tqdm(range(len(self.originals)), desc="Calculating statistic", colour="yellow"):
                 imageHandler.createMaskGeoTIFF(self.originals[i], mask_folder)
                 mask = glob.glob(mask_folder + '/*.tif')[0]
                 v1, v2, v3, v4 = imageHandler.generate_comparison_GeoTIFF(
@@ -111,6 +118,11 @@ class validation():
                 tn += v2
                 fp += v3
                 fn += v4
+                if isRoad:
+                    mask_lines += V.createCenterLines(mask, False, output_geojson, zone, utmOrLatLon, log_file) # Does not save GeoJSON of solution
+                    segmented_lines += V.createCenterLines(self.segmentations[i], save, output_geojson, zone, utmOrLatLon, log_file, count=i)
+                mask_boundaries += V.createBoundaries(mask, False, output_geojson, zone, utmOrLatLon, log_file) # Does not save GeoJSON of solution
+                segmented_boundaries += V.createBoundaries(self.segmentations[i], save, output_geojson, zone, utmOrLatLon, log_file, count=i)
                 gf.emptyFolder(mask_folder)
 
         total = tp + tn + fp + fn
@@ -133,10 +145,13 @@ class validation():
             merged_segmented = self.segmentations[0]
 
         if check_geographic_overlap(merged_original, merged_segmented):
+            print("Merged GeoTIFFs overlap.")
             imageHandler.createMaskGeoTIFF(merged_original, mask_folder)
             mask = glob.glob(mask_folder + '/*.tif')[0]
             if check_geographic_overlap(merged_segmented, mask):
+                print("Segmentations and masks overlap.")
                 IoU = calculate_IoU_between_masks(mask, merged_segmented)
+                print("IoU calculated.")
                 gf.log_info(log_file, f"Original file: {merged_original}")
                 gf.log_info(log_file, f"Segmented file: {merged_segmented}")
                 gf.log_info(log_file, f"Mask file: {mask}")
@@ -156,9 +171,15 @@ False negatives: {fn/total}
 Precision: {tp/(tp + fp)} (How many retrieved pixels are relevant?)
 Recall: {tp/(tp+fn)} (How many relevant pixels are retrieved?)
 F1: {2 * tp /(2 * tp + fp + fn)} (Harmonic mean of precision and recall)
+Total length of boundaries (segmented / correct): {segmented_boundaries} / {mask_boundaries} = {segmented_boundaries / mask_boundaries}
+{f'Total length of centerlines (segmented / correct): {segmented_lines} / {mask_lines} = {segmented_lines / mask_lines}' if isRoad else ''}
 """
 )
         gf.emptyFolder(mask_folder)
+        if os.path.exists(merged_original):
+            os.remove(merged_original)
+        if os.path.exists(merged_segmented):
+            os.remove(merged_segmented)
 
 # Helper functions:
 
@@ -166,7 +187,7 @@ def check_geographic_overlap(original_file, segmented_file):
     """
     Checks if two GeoTIFFs overlaps 100%.
 
-    Args:
+    Arguments:
         original_file (string): File path to aerial image
         segmented_file (string): File path to segmented image
     
@@ -190,7 +211,7 @@ def get_segmented_pixels(file):
     """
     Fetches the segmented pixels in the image.
 
-    Args:
+    Argument:
         file (string): File path to the image
 
     Returns:
@@ -208,7 +229,7 @@ def compute_IoU(mask1, mask2):
     mask1 and mask2 - the predicted segmentations and
     created, correct mask.
 
-    Args:
+    Arguments:
         mask1 (ndarray): An numpy-representation of an image with one class
         mask2 (ndarray): An numpy-representation of an image with one class
 
@@ -227,7 +248,7 @@ def calculate_IoU_between_masks(mask, prediction):
     Calculates the IoU value of the segmented area between the mask
     and prediction of the same area.
 
-    Args:
+    Arguments:
         mask (string): File path to the GeoTIFF representing the mask
         prediction (string): File path to the GeoTIFF representing the prediction
     

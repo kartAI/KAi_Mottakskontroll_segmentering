@@ -7,7 +7,6 @@ import glob
 import numpy as np
 import os
 from pyproj import CRS
-from pyproj.database import query_crs_info
 import rasterio
 from rasterio.features import geometry_mask, shapes
 from shapely.geometry import shape
@@ -34,7 +33,7 @@ class MapSegmentationDataset(Dataset):
         """
         Creates a new instance of MapSegmentationDataset.
 
-        Args:
+        Arguments:
             geotiffs (list[string]): List of path to the GeoTIFFs used for training
             geodata (dict): Dictionary with 'buildings' and 'roads' as key, refering to geographic data
             transform (dict): Optional, any data augmentations or transformations, default None
@@ -56,7 +55,7 @@ class MapSegmentationDataset(Dataset):
         """
         Fetches one of the elements in the data set.
 
-        Args:
+        Argument:
             idx (int): The index of the object in the data set to fetch
         
         Returns:
@@ -105,7 +104,7 @@ class preProcessor():
         """
         Creates an instance of preProcessor.
 
-        Args:
+        Arguments:
             split (float): Split ratio for training and validation
             output (string): Path to output folder to store tiles
             width (int): Image width of the tile, default 1024
@@ -120,7 +119,7 @@ class preProcessor():
         """
         Splits a GeoTIFF into tiles and saves it in specified folder.
 
-        Args:
+        Arguments:
             geotiff (string): Path to the GeoTIFF to split
             remove (bool): Telling if the tile folder should be emptied before new ones are generated, default True
             count (int): Integer used for file names of saved tiles, default False
@@ -170,11 +169,11 @@ class preProcessor():
         """
         Save a tile to a new GeoTIFF.
 
-        Args:
-        tile_data (ndarray): ndarray representation of the tile (image)
-        transform (Affine): An Affain transformation object that defines the georeferencing of the tile
-        metadata (dict): Dictionary with all the metadata of the new tile
-        filename (string): Path to the new GeoTIFF
+        Arguments:
+            tile_data (ndarray): ndarray representation of the tile (image)
+            transform (Affine): An Affain transformation object that defines the georeferencing of the tile
+            metadata (dict): Dictionary with all the metadata of the new tile
+            filename (string): Path to the new GeoTIFF
         """
         profile = metadata["profile"]
         profile.update({
@@ -193,7 +192,7 @@ class preProcessor():
         """
         Splits the GeoTIFFs from the folder in training and validation sets.
 
-        Args:
+        Arguments:
             folder (string): Path to the folder containing the GeoTIFFs, default None
             liste (list[string]): List of GeoTIFF paths, default None
         
@@ -218,7 +217,7 @@ def tile_contains_valid_data(tile_data, nodata):
     Checks if not all pixels in the tile contains nnodata value
     (Ensure some valid data / pixels)
 
-    Args:
+    Arguments:
         tile_data (ndarray): ndarray representation of the image
         nodata (int): The nodata value of the image
     
@@ -236,7 +235,7 @@ def geotiff_to_geopackage(input_tiff, output_gpkg, layer_name, log_file):
     """
     Converts a binary GeoTIFF (1 = True, 0 = False) to a GeoPackage.
 
-    Args:
+    Arguments:
         input_tiff (string): Path to the GeoTIFF
         output_gpkg (string): Path to save the GeoPackage
         layer_name (string): Name of the layer in the geopackage

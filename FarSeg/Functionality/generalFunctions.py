@@ -16,7 +16,7 @@ def get_valid_input(prompt, validator, default=None):
     """
     A general function checking that user input is valid.
 
-    Args:
+    Arguments:
         prompt (string): Text showed to the user when asked for input
         validator (callable): A function taking a string, returning True for valid input, otherwise False
     
@@ -35,7 +35,7 @@ def yesNo(input):
     """
     Checks if an input is either yes or no.
 
-    Args:
+    Argument:
         input (string): Input from user.
     
     Returns:
@@ -52,7 +52,7 @@ def doesPathExists(input):
     """
     Checks if the given user input is a path that exists.
 
-    Args:
+    Argument:
         input (string): Input from the user
     
     Returns:
@@ -64,7 +64,7 @@ def positiveNumber(input):
     """
     Checks if the input is a positive integer.
 
-    Args:
+    Argument:
         input (string): Input from the user
     
     Returns:
@@ -79,7 +79,7 @@ def emptyFolder(input):
     """
     Deletes the folder given as an input string from the user, if it exists, and creates a new, empty one.
 
-    Args:
+    Argument:
         input (string): Input path to the new folder given by the user
 
     Returns:
@@ -99,9 +99,9 @@ def emptyFolder(input):
 
 def resetFile(input):
     """
-    Deletesthe file given as an input string from the user, if it exists, and creates a new , empty one.
+    Deletes the file given as an input string from the user, if it exists, and creates a new , empty one.
 
-    Args:
+    Argument:
         input (string): Input path to the new file given by the user
     
     Returns:
@@ -119,11 +119,24 @@ def resetFile(input):
     except Exception as e:
         print(f"An error occurred during deletion/creation of the file '{input}': {e}")
 
+def correctUTMZone(zone):
+    """
+    Checks if the input zone is a valid zone for UTM in Norway.
+
+    Argument:
+        zone (string): UTM zone given as user input
+
+    Returns:
+        bool: True is valid zone, False otherwise
+    """
+    valid_zones = ["32N", "33N", "35N"]
+    return zone in valid_zones
+
 def load_geopackages(folder):
     """
     Load geometries for buildings and roads from multiple GeoPackages in a folder.
 
-    Args:
+    Argument:
         folder (string): File path to the folder containing the geopackages
     
     Returns:
@@ -145,7 +158,7 @@ def log_info(logfile, message):
     """
     Writes the message to the logfile.
 
-    Args:
+    Arguments:
         logfile (string): Path to the log file
         message (string): Text that should be written
     """

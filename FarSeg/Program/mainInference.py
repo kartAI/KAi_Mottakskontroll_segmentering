@@ -40,7 +40,7 @@ def mainInference():
     geodata_tif = [f for f in os.listdir(geodata_folder) if f.endswith('.tif') and f.replace('.tif', '.gpkg') not in geodata_gpkg]
     # If some of the training data is stored as GeoTIFF format:
     if len(geodata_tif) > 0:
-        for file in geodata_tif:
+        for file in tqdm(geodata_tif, desc="GeoTIFFs to GeoPackage", colour="yellow"):
             file = os.path.join(geodata_folder, file)
             geotiff_to_geopackage(
                 file,
@@ -102,7 +102,7 @@ Saves as jpg as well: {choice}
         tileGenerator.generate_tiles(path)
         splitted_geotiffs = [os.path.join(tile_folder, f) for f in os.listdir(tile_folder) if f.endswith('.tif')]
         # Step 2: Iterate over all the tiles
-        for _, geotiff in tqdm(enumerate(splitted_geotiffs), desc=f"Tiles processed for GeoTIFF {k+1}"):
+        for _, geotiff in tqdm(enumerate(splitted_geotiffs), desc=f"Tiles processed for GeoTIFF {k+1}", colour="yellow", leave=False):
             image_data, metadata = imageHandler.readGeoTIFF(geotiff)
             # Step 3: Adjust the image
             # Check if the image has 3 bands (for RGB). If not, adapt the normalization dynamically:

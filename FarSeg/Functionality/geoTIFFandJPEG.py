@@ -17,7 +17,7 @@ class imageSaver():
     """
     Instance handling saving of images as GeoTIFF and JPEG
     
-    Attributes:
+    Attribute:
         folder (None, string): A string with the path to the folder containing relevant geopackage data, default None
     """
 
@@ -25,7 +25,7 @@ class imageSaver():
         """
         Creates a new instance of imageSaver.
 
-        Args:
+        Argument:
             folder (string): A string with the path to the folder containing relevant geopackage data
         """
         if folder != None:
@@ -37,7 +37,7 @@ class imageSaver():
         """
         Reads the GeoTIFF data and returns it for further work.
 
-        Args:
+        Argument:
             tif_file (string): The file path to the GeoTIFF
 
         Returns:
@@ -71,7 +71,7 @@ class imageSaver():
         If the mask is going to be saved, the mask is given as input, and original = False.
         The function includes '_original' or '_mask' in the end of the file name depending on situation.
 
-        Args:
+        Arguments:
             tif (string): File path to the GeoTIFF
             output (string): File path to the output folder
             mask (ndarray): The rgb mask saved in a ndarray, default None
@@ -102,14 +102,14 @@ class imageSaver():
         If the mask is going to be saved, the mask is given as input, and original = False.
         The function includes '_original' or '_mask' in the end of the file name depending on situation.
 
-        Args:
+        Arguments:
             tif (string): File path to the GeoTIFF
             output (string): File path to the output folder
             mask (ndarray): The rgb mask saved in a ndarray, default None
             original (bool): A boolean telling what to be saved, default True
         """
         if original:
-            image_data, metadata = self.readGeoTIFF(tif)
+            image_data, _ = self.readGeoTIFF(tif)
             filename = os.path.join(output, os.path.basename(tif).replace('.tif', '_original.jpg'))
         else:
             image_data = mask
@@ -121,13 +121,13 @@ class imageSaver():
         """
         Creates the mask of the original GeoTIFF.
 
-        Args:
+        Arguments:
             tif (string): File path to the GeoTIFF
         
         Returns:
             rgb_mask (ndarray): The mask of the GeoTIFF based upon geopackage layers
         """
-        image_data, metadata = self.readGeoTIFF(tif)
+        _, metadata = self.readGeoTIFF(tif)
         # Create RGB mask:
         # (Only two layers: buildings and roads)
         rgb_mask =  np.zeros((metadata["height"], metadata["width"], 3), dtype='uint8')
@@ -154,7 +154,7 @@ class imageSaver():
         """
         Creates the mask of the GeoTIFF and saves it as a new GeoTIFF.
 
-        Args:
+        Arguments:
             tif (string): File path to the GeoTIFF
             output (string): File path to the output folder
         """
@@ -165,7 +165,7 @@ class imageSaver():
         """
         Creates the mask of the GeoTIFF and saves it as a new JPEG.
 
-        Args:
+        Arguments:
             tif (string): File path to the GeoTIFF
             output (string): File path to the output folder
         """
@@ -176,7 +176,7 @@ class imageSaver():
         """
         Creates a new GeoTIFF based on a given array.
 
-        Args:
+        Arguments:
             output (string): Path to the output file
             profile (dict): A dictionary containing metadata and configuration for the GeoTIFF file
             image_array (ndarray): An array with the image data
@@ -189,7 +189,7 @@ class imageSaver():
         """
         Merges all the GeoTIFFs into one bigger one.
 
-        Args:
+        Arguments:
             paths (list[string]): A list containing the paths to all the GeoTIFFs to be merged
             output_path (string): The path to save the model
         """
@@ -215,7 +215,7 @@ class imageSaver():
         """
         Function that generates a new GeoTIFF with colors representing the precision of the segmentation and returns the number of true / false positives / negatives.
 
-        Args:
+        Arguments:
             segmentation_path (string): Path to the segmented GeoTIFF
             mask_path (string): Path to the correct mask (solution)
             output_path (string): Path to save the new GeoTIFF

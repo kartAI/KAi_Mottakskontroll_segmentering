@@ -27,6 +27,11 @@ def mainTrain():
     """
     torch.cuda.empty_cache()
     print()
+    choice = gf.get_valid_input("Will you upload a trained model(?)(y/n): ", lambda x: gf.yesNo(x) is not None)
+    choice = gf.yesNo(choice)
+    if choice:
+        model_path = gf.get_valid_input("Where are your trained model stored(?): ", gf.doesPathExists)
+    print()
     log_file = gf.get_valid_input("Where will you log the process (.log file): ", gf.resetFile)
     # Folder with geographic data (buildings and roads):
     geodata_folder = gf.get_valid_input("Where are the geographic data stored (the solution)(?): ", gf.doesPathExists)
@@ -63,6 +68,9 @@ def mainTrain():
     tileContainer = tileValidation(geodata_folder)
     # Initialize model, loss function and optimizer:
     model, criterion, optimizer = initialize_model(num_classes, lr=learning_rate)
+    if choice:
+        if model_path:
+            model.load_state_dict(torch.load(model_path, weights_only=True))
     # Initializes the pre-processing element:
     preProcessing = preProcessor(val_split, tile_folder)
     geotiffCounter = geotiffStopping(patience, min_improvement)
@@ -149,6 +157,7 @@ Validation files: {len(val_files)}
             output=True,
             log_file=log_file
         )
+        print(loss)
         geotiffCounter(loss)
         # Step 5: Clear tiles in the folder to prepare for next GeoTIFF
         del train_dataset, val_dataset, train_loader, val_loader, loss

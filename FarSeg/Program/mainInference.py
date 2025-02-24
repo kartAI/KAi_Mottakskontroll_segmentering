@@ -91,7 +91,7 @@ Saves as jpg as well: {choice}
     tileGenerator = preProcessor(0.7, tile_folder)
     imageCombiner = postProcessor(tile_folder, segmented_folder)
     imageHandler = imageSaver()
-    for k, path in enumerate(geotiff_paths):
+    for k, path in enumerate(tqdm(geotiff_paths, desc="GeoTIFFs segmented", colour="yellow")):
         # Step 0: Fetch original image size
         _, info = imageHandler.readGeoTIFF(path)
         original_size = (info["height"], info["width"])
@@ -102,7 +102,7 @@ Saves as jpg as well: {choice}
         tileGenerator.generate_tiles(path)
         splitted_geotiffs = [os.path.join(tile_folder, f) for f in os.listdir(tile_folder) if f.endswith('.tif')]
         # Step 2: Iterate over all the tiles
-        for _, geotiff in tqdm(enumerate(splitted_geotiffs), desc=f"Tiles processed for GeoTIFF {k+1}", colour="yellow", leave=False):
+        for _, geotiff in enumerate(tqdm(splitted_geotiffs, desc=f"Tiles processed for GeoTIFF {k+1}", colour="green", leave=False)):
             image_data, metadata = imageHandler.readGeoTIFF(geotiff)
             # Step 3: Adjust the image
             # Check if the image has 3 bands (for RGB). If not, adapt the normalization dynamically:

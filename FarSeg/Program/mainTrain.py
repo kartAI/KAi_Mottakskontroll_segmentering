@@ -157,7 +157,6 @@ Validation files: {len(val_files)}
             output=True,
             log_file=log_file
         )
-        print(loss)
         geotiffCounter(loss)
         # Step 5: Clear tiles in the folder to prepare for next GeoTIFF
         del train_dataset, val_dataset, train_loader, val_loader, loss

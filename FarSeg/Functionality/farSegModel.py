@@ -138,22 +138,27 @@ class geotiffStopping():
             val_loss (float): Loss values of the last validation
             log_file (string): Path to the log file to log proress, default None
         """
-        if np.isnan(loss) or np.isinf(loss):
+        try:
+            if np.isnan(loss) or np.isinf(loss):
+                self.early_stop = True
+                if log_file:
+                    gf.log_info(log_file, f"Invalid loss: {loss}")
+                return
+            self.loss_history.append(loss)
+            avg_loss = np.mean(self.loss_history)
+            if self.best_score is None or avg_loss < self.best_score - self.min_delta:
+                self.best_score = avg_loss
+                self.counter = 0
+            else:
+                self.counter += 1
+                if self.counter >= self.patience:
+                    self.early_stop = True
+                    if log_file:
+                        gf.log_info(log_file, "The model is not getting better anymore.")
+        except:
             self.early_stop = True
             if log_file:
                 gf.log_info(log_file, f"Invalid loss: {loss}")
-            return
-        self.loss_history.append(loss)
-        avg_loss = np.mean(self.loss_history)
-        if self.best_score is None or avg_loss < self.best_score - self.min_delta:
-            self.best_score = avg_loss
-            self.counter = 0
-        else:
-            self.counter += 1
-            if self.counter >= self.patience:
-                self.early_stop = True
-                if log_file:
-                    gf.log_info(log_file, "The model is not getting better anymore.")
 
 # Function:
 

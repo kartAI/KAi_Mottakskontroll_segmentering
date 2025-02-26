@@ -114,6 +114,8 @@ class imageSaver():
         else:
             image_data = mask
             filename = os.path.join(output, os.path.basename(tif).replace('.tif', '_mask.jpg'))
+        if image_data.shape[-1] == 4:
+            image_data = image_data[:, :, :3]
         original = Image.fromarray(image_data)
         original.save(filename, format='JPEG')
 

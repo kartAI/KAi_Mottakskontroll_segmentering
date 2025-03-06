@@ -2,15 +2,9 @@
 
 # Libraries:
 
-from collections import deque
-import geopandas as gpd
-import numpy as np
 import os
 import rasterio
 from rasterio.windows import Window
-from shapely.geometry import LineString, MultiLineString
-from shapely.ops import unary_union, linemerge
-from tqdm import tqdm
 
 import Functionality.generalFunctions as gf
 

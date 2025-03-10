@@ -8,6 +8,7 @@ from PIL import Image
 import rasterio
 from rasterio.features import rasterize
 from rasterio.merge import merge
+from shapely.geometry import Polygon
 
 import generalFunctions as gf
 
@@ -129,6 +130,29 @@ class imageSaver():
         Returns:
             rgb_mask (ndarray): The mask of the GeoTIFF based upon geopackage layers
         """
+
+        _, metadata = self.readGeoTIFF(tif)
+        # Create RGB mask:
+        rgb_mask = np.zeros((metadata["height"], metadata["width"], 3), dtype=np.uint8)
+
+        # Rasterize geometries for segmented area (white)
+        layer = self.geopackages.keys()
+        
+        color = (255, 255, 255)
+        
+        shapes = [geom for geom in self.geopackages[layer[0]].geometry if geom.is_valid]
+
+        holes = [
+            Polygon(interior)
+            for poly in shapes
+            for single_poly in (poly.geoms if poly.geom_type == "MultiPolygon" else [poly])
+            for interior in single_poly.interiors
+        ]
+
+        buildings_inside_hole = [any(shape.within(hole) for hole in holes) for shape in shapes]
+
+
+        """
         _, metadata = self.readGeoTIFF(tif)
         # Create RGB mask:
         # (Only two layers: buildings and roads)
@@ -151,6 +175,7 @@ class imageSaver():
                 for channel, value in enumerate(color):
                     rgb_mask[:, :, channel] += (layer_mask * value).astype('uint8')
         return rgb_mask
+        """
 
     def createMaskGeoTIFF(self, tif, output):
         """

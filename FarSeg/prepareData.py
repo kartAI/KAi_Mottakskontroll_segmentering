@@ -9,7 +9,8 @@ import os
 import rasterio
 from rasterio.features import rasterize
 from rasterio.windows import Window
-from shapely.geometry import shape
+from shapely.geometry import shape, Polygon, MultiPolygon
+from tqdm import tqdm
 
 import Functionality.generalFunctions as gf
 
@@ -68,6 +69,16 @@ def fetchDirection(string):
     else:
         return 'horizontal'
 
+def getExteriors(geom):
+    """
+    """
+    if isinstance(geom, Polygon):
+        return [geom.exterior.coords]
+    elif isinstance(geom, MultiPolygon):
+        return [poly.exterior for poly in geom.geoms]
+    else:
+        return []
+
 def angleBetweenVectors(v1, v2):
     """
     """
@@ -85,7 +96,9 @@ def angleBetweenVectors(v1, v2):
 def countSignificantCorners(polygon, threshold=30, length_threshold=2):
     """
     """
-    coords = list(polygon.exterior.coords)
+    coords = getExteriors(polygon)
+    if len(coords) == 1:
+        coords = coords[0].coords
     
     if len(coords) < 4:
         return 0
@@ -179,6 +192,7 @@ def categorizeGeoTIFFBuilding(geodata, geotiff, output):
     blue_band = np.zeros(out_shape, dtype=np.uint8)
 
     building_classes = []
+
     for _, row in gdf.iterrows():
         poly = row.geometry
         num_sides = countSignificantCorners(poly)
@@ -204,12 +218,32 @@ def categorizeGeoTIFFBuilding(geodata, geotiff, output):
         
         building_classes.append((poly, color))
     
-    red_band = rasterize([(poly, color[0]) for poly, color in building_classes],
-                         out_shape=out_shape, transform=transform, fill=0, dtype=np.uint8)
-    green_band = rasterize([(poly, color[1]) for poly, color in building_classes],
-                         out_shape=out_shape, transform=transform, fill=0, dtype=np.uint8)
-    blue_band = rasterize([(poly, color[2]) for poly, color in building_classes],
-                         out_shape=out_shape, transform=transform, fill=0, dtype=np.uint8)
+    red_band = rasterize([(poly, color[0]) for poly, color in building_classes], out_shape=out_shape, transform=transform, fill=0, dtype=np.uint8)
+    green_band = rasterize([(poly, color[1]) for poly, color in building_classes], out_shape=out_shape, transform=transform, fill=0, dtype=np.uint8)
+    blue_band = rasterize([(poly, color[2]) for poly, color in building_classes], out_shape=out_shape, transform=transform, fill=0, dtype=np.uint8)
+
+    holes = [
+        Polygon(interior)
+        for poly, _ in building_classes
+        for single_poly in (poly.geoms if poly.geom_type == "MultiPolygon" else [poly])
+        for interior in single_poly.interiors
+    ]
+
+    buildings_inside_hole = []
+
+    for building in building_classes:
+        if any(building[0].within(hole) for hole in holes):
+            buildings_inside_hole.append(building)
+
+    if holes:
+        hole_mask = rasterize([(hole, 255) for hole in holes], out_shape=out_shape, transform=transform, fill=0, dtype=np.uint8)
+        red_band[hole_mask > 0] = 0
+        green_band[hole_mask > 0] = 0
+        blue_band[hole_mask > 0] = 0
+
+    red_band |= rasterize([(poly, color[0]) for poly, color in buildings_inside_hole], out_shape=out_shape, transform=transform, fill=0, dtype=np.uint8)
+    green_band |= rasterize([(poly, color[1]) for poly, color in buildings_inside_hole], out_shape=out_shape, transform=transform, fill=0, dtype=np.uint8)
+    blue_band |= rasterize([(poly, color[2]) for poly, color in buildings_inside_hole], out_shape=out_shape, transform=transform, fill=0, dtype=np.uint8)
 
     with rasterio.open(output, 'w', driver="GTiff",
                        height=out_shape[0], width=out_shape[1], count=3,

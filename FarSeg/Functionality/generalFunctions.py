@@ -146,7 +146,7 @@ def load_geopackages(folder):
     geodata = {}
 
     for i in range(len(geopackages)):
-        name = geopackages[i].split(".")[0].split('\\')[-1].lower()
+        name = geopackages[i].split(".")[0].split('/')[-1].lower()
         gdf = gpd.read_file(geopackages[i])
         gdf['geometry'] = gdf['geometry'].apply(make_valid)
         gdf = gdf[gdf['geometry'].notnull() & ~gdf['geometry'].is_empty]

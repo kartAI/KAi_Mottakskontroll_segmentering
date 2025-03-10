@@ -2,9 +2,14 @@
 
 # Libraries:
 
+import geopandas as gpd
+import math
+import numpy as np
 import os
 import rasterio
+from rasterio.features import rasterize
 from rasterio.windows import Window
+from shapely.geometry import shape
 
 import Functionality.generalFunctions as gf
 
@@ -63,11 +68,53 @@ def fetchDirection(string):
     else:
         return 'horizontal'
 
+def angleBetweenVectors(v1, v2):
+    """
+    """
+    dot_product = np.dot(v1, v2)
+    magnitude_v1 = np.linalg.norm(v1)
+    magnitude_v2 = np.linalg.norm(v2)
+    
+    if magnitude_v1 == 0 or magnitude_v2 == 0:
+        return 0
+
+    cosine_angle = dot_product / (magnitude_v1 * magnitude_v2)
+    angle = math.degrees(math.acos(np.clip(cosine_angle, -1.0, 1.0)))
+    return angle
+
+def countSignificantCorners(polygon, threshold=30, length_threshold=2):
+    """
+    """
+    coords = list(polygon.exterior.coords)
+    
+    if len(coords) < 4:
+        return 0
+    
+    significant_corners = 0
+
+    for i in range(len(coords) - 1):
+        p1 = np.array(coords[i - 1])
+        p2 = np.array(coords[i])
+        p3 = np.array(coords[(i + 1) % (len(coords) - 1)])
+        
+        v1 = p2 - p1
+        v2 = p3 - p2
+
+        len_v1 = np.linalg.norm(v1)
+        len_v2 = np.linalg.norm(v2)
+
+        angle = angleBetweenVectors(v1, v2)
+
+        if angle > threshold and len_v1 > length_threshold and len_v2 > length_threshold:
+            significant_corners += 1
+    
+    return significant_corners
+
 def splitGeoTIFF(file):
     """
     Function that splits a GeoTIFF into a train and test part.
 
-    Arguments:
+    Argument:
         file (string): Path to the GeoTIFF that are going to be splitted
     """
     ratio = gf.get_valid_input("Which ratio will you split the GeoTIFF in(?): ", validRatio)
@@ -110,3 +157,71 @@ def splitGeoTIFF(file):
         else:
             write_tiff(test_path, window2)
             write_tiff(train_path, window1)
+
+def categorizeGeoTIFFBuilding(geodata, geotiff, output):
+    """
+    ...
+
+    Arguments:
+        geodata (string): Path to the folder to the GeoPackage
+        geotiff (string): Path to the GeoTIFF
+        output (string): Path to the output folder
+    """
+    gdf = gpd.read_file(geodata)
+
+    with rasterio.open(geotiff) as src:
+        transform = src.transform
+        out_shape = [src.height, src.width]
+        crs = src.crs
+    
+    red_band = np.zeros(out_shape, dtype=np.uint8)
+    green_band = np.zeros(out_shape, dtype=np.uint8)
+    blue_band = np.zeros(out_shape, dtype=np.uint8)
+
+    building_classes = []
+    for _, row in gdf.iterrows():
+        poly = row.geometry
+        num_sides = countSignificantCorners(poly)
+        area = poly.area
+        if num_sides <= 6:
+            classification = "simple"
+        elif num_sides >= 12:
+            classification = "complex"
+        else:
+            classification = "medium"
+        
+        if area > 500:
+            classification = "large"
+
+        if classification == "large":
+            color = (0, 255, 255)
+        elif classification == "simple":
+            color = (0, 255, 0)
+        elif classification == "complex":
+            color = (255, 0, 0)
+        else:
+            color = (255, 165, 0)
+        
+        building_classes.append((poly, color))
+    
+    red_band = rasterize([(poly, color[0]) for poly, color in building_classes],
+                         out_shape=out_shape, transform=transform, fill=0, dtype=np.uint8)
+    green_band = rasterize([(poly, color[1]) for poly, color in building_classes],
+                         out_shape=out_shape, transform=transform, fill=0, dtype=np.uint8)
+    blue_band = rasterize([(poly, color[2]) for poly, color in building_classes],
+                         out_shape=out_shape, transform=transform, fill=0, dtype=np.uint8)
+
+    with rasterio.open(output, 'w', driver="GTiff",
+                       height=out_shape[0], width=out_shape[1], count=3,
+                       dtype=np.uint8, crs=crs, transform=transform) as dst:
+        dst.write(red_band, 1)
+        dst.write(green_band, 2)
+        dst.write(blue_band, 3)
+
+# Program
+
+geodata = "C:/Jakob_Marianne_2024_2025/Geopackage_Farsund/Test/Buildings.gpkg"
+geotiff = "C:/Jakob_Marianne_2024_2025/Ortofoto/Training/Test/Training_area_urban.tif"
+output = "C:/Users/jshjelse/Documents/dev/mask.tif"
+
+categorizeGeoTIFFBuilding(geodata, geotiff, output)

@@ -132,13 +132,14 @@ class imageSaver():
         """
 
         _, metadata = self.readGeoTIFF(tif)
+        out_shape = (metadata["height"], metadata["width"])
+        transform = metadata["transform"]
+
         # Create RGB mask:
-        rgb_mask = np.zeros((metadata["height"], metadata["width"], 3), dtype=np.uint8)
+        rgb_mask = np.zeros((out_shape[0], out_shape[1], 3), dtype=np.uint8)
 
         # Rasterize geometries for segmented area (white)
-        layer = self.geopackages.keys()
-        
-        color = (255, 255, 255)
+        layer = list(self.geopackages.keys())
         
         shapes = [geom for geom in self.geopackages[layer[0]].geometry if geom.is_valid]
 
@@ -149,33 +150,48 @@ class imageSaver():
             for interior in single_poly.interiors
         ]
 
-        buildings_inside_hole = [any(shape.within(hole) for hole in holes) for shape in shapes]
+        shapes_inside_holes = [shape for shape in shapes if any(shape.within(hole) for hole in holes)]
 
+        # White mask for geometries:
+        main_mask = rasterize(
+            [(shape, 1) for shape in shapes],
+            out_shape=out_shape,
+            transform=transform,
+            fill=0,
+            dtype=np.uint8,
+            all_touched=True
+        )
 
-        """
-        _, metadata = self.readGeoTIFF(tif)
-        # Create RGB mask:
-        # (Only two layers: buildings and roads)
-        rgb_mask =  np.zeros((metadata["height"], metadata["width"], 3), dtype='uint8')
+        # Black mask for holes:
+        hole_mask = rasterize(
+            [(hole, 1) for hole in holes],
+            out_shape=out_shape,
+            transform=transform,
+            fill=0,
+            dtype=np.uint8,
+            all_touched=True
+        )
 
-        # Rasterize geometries for segmented area (white):
-        layers = list(self.geopackages.keys())
-        for layer, color in zip([0], [(255, 255, 255)]):
-            if layer < len(self.geopackages):
-                shapes = [(geom, 1) for geom in self.geopackages[layers[layer]].geometry if geom.is_valid]
-                layer_mask = rasterize(
-                    shapes,
-                    out_shape=(metadata["height"], metadata["width"]),
-                    transform=metadata["transform"],
-                    fill=0,
-                    dtype="uint8",
-                    all_touched=True
-                )
-                # Apply color for the corresponding pixels:
-                for channel, value in enumerate(color):
-                    rgb_mask[:, :, channel] += (layer_mask * value).astype('uint8')
+        # Removes holes:
+        main_mask[hole_mask > 0] = 0
+
+        # Add shapes inside holes:
+        nested_shapes_mask = rasterize(
+            [(shape, 1) for shape in shapes_inside_holes],
+            out_shape=out_shape,
+            transform=transform,
+            fill=0,
+            dtype=np.uint8,
+            all_touched=True
+        )
+
+        final_mask = main_mask | nested_shapes_mask
+
+        rgb_mask[:, :, 0] = final_mask * 255
+        rgb_mask[:, :, 1] = final_mask * 255
+        rgb_mask[:, :, 2] = final_mask * 255
+
         return rgb_mask
-        """
 
     def createMaskGeoTIFF(self, tif, output):
         """

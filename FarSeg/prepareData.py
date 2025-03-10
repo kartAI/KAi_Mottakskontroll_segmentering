@@ -9,8 +9,7 @@ import os
 import rasterio
 from rasterio.features import rasterize
 from rasterio.windows import Window
-from shapely.geometry import shape, Polygon, MultiPolygon
-from tqdm import tqdm
+from shapely.geometry import Polygon, MultiPolygon
 
 import Functionality.generalFunctions as gf
 
@@ -71,6 +70,13 @@ def fetchDirection(string):
 
 def getExteriors(geom):
     """
+    Fetches the exterior geometries from the map layer.
+
+    Argument:
+        geom (geometry): The map objects of the layer
+
+    Returns:
+        list[geometry]: List of geometries for further analysis
     """
     if isinstance(geom, Polygon):
         return [geom.exterior.coords]
@@ -81,6 +87,13 @@ def getExteriors(geom):
 
 def angleBetweenVectors(v1, v2):
     """
+    Calculates the angle between the two vectors.
+
+    Arguments:
+        v1, v2 (array): Numpy arrays representing the vectors
+
+    Returns:
+        float: Float number of the angle
     """
     dot_product = np.dot(v1, v2)
     magnitude_v1 = np.linalg.norm(v1)
@@ -93,8 +106,17 @@ def angleBetweenVectors(v1, v2):
     angle = math.degrees(math.acos(np.clip(cosine_angle, -1.0, 1.0)))
     return angle
 
-def countSignificantCorners(polygon, threshold=30, length_threshold=2):
+def countSignificantCorners(polygon, angle_threshold=30, length_threshold=2):
     """
+    Count number of building walls with a distinct enough characteristic.
+
+    Arguments:
+        polygon (geometry): Geometry of the polygon to be analysed
+        angle_threshold (int): Minimum change of angle to count, default=30
+        length_threshold (int): Minimum lenght of wall to be considered as a large enough wall, default=2
+    
+    Returns:
+        int: Number of distinct walls / corners
     """
     coords = getExteriors(polygon)
     if len(coords) == 1:
@@ -118,7 +140,7 @@ def countSignificantCorners(polygon, threshold=30, length_threshold=2):
 
         angle = angleBetweenVectors(v1, v2)
 
-        if angle > threshold and len_v1 > length_threshold and len_v2 > length_threshold:
+        if angle > angle_threshold and len_v1 > length_threshold and len_v2 > length_threshold:
             significant_corners += 1
     
     return significant_corners
@@ -173,7 +195,7 @@ def splitGeoTIFF(file):
 
 def categorizeGeoTIFFBuilding(geodata, geotiff, output):
     """
-    ...
+    Creates a new GeoTIFF with categorized raster depending on the complexity of the buildings
 
     Arguments:
         geodata (string): Path to the folder to the GeoPackage
@@ -251,11 +273,3 @@ def categorizeGeoTIFFBuilding(geodata, geotiff, output):
         dst.write(red_band, 1)
         dst.write(green_band, 2)
         dst.write(blue_band, 3)
-
-# Program
-
-geodata = "C:/Jakob_Marianne_2024_2025/Geopackage_Farsund/Test/Buildings.gpkg"
-geotiff = "C:/Jakob_Marianne_2024_2025/Ortofoto/Training/Test/Training_area_urban.tif"
-output = "C:/Users/jshjelse/Documents/dev/mask.tif"
-
-categorizeGeoTIFFBuilding(geodata, geotiff, output)

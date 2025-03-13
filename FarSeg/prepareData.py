@@ -10,6 +10,7 @@ import rasterio
 from rasterio.features import rasterize
 from rasterio.windows import Window
 from shapely.geometry import Polygon, MultiPolygon
+from tqdm import tqdm
 
 import Functionality.generalFunctions as gf
 
@@ -35,6 +36,10 @@ def validRatio(string):
                 return False
             if int(num) <= 0:
                 return False
+            if int(num) >= 100:
+                return False
+        if int(numbers[0]) + int(numbers[1]) != 100:
+            return False
         return True
     except:
         return False
@@ -79,7 +84,7 @@ def getExteriors(geom):
         list[geometry]: List of geometries for further analysis
     """
     if isinstance(geom, Polygon):
-        return [geom.exterior.coords]
+        return [geom.exterior]
     elif isinstance(geom, MultiPolygon):
         return [poly.exterior for poly in geom.geoms]
     else:
@@ -112,7 +117,7 @@ def countSignificantCorners(polygon, angle_threshold=30, length_threshold=2):
 
     Arguments:
         polygon (geometry): Geometry of the polygon to be analysed
-        angle_threshold (int): Minimum change of angle to count, default=30
+        angle_threshold (int): Minimum change of angle to count, default=10
         length_threshold (int): Minimum lenght of wall to be considered as a large enough wall, default=2
     
     Returns:
@@ -127,21 +132,25 @@ def countSignificantCorners(polygon, angle_threshold=30, length_threshold=2):
     
     significant_corners = 0
 
-    for i in range(len(coords) - 1):
+    for i in range(len(coords)):
         p1 = np.array(coords[i - 1])
-        p2 = np.array(coords[i])
-        p3 = np.array(coords[(i + 1) % (len(coords) - 1)])
+        p2 = np.array(coords[i]) # It is this corner that counts
+        p3 = np.array(coords[(i + 1) % len(coords)])
+        p4 = np.array(coords[(i + 2) % len(coords)])
         
         v1 = p2 - p1
-        v2 = p3 - p2
+        v2 = p3 - p2 # It is this wall that counts
+        v3 = p4 - p3
 
-        len_v1 = np.linalg.norm(v1)
         len_v2 = np.linalg.norm(v2)
 
-        angle = angleBetweenVectors(v1, v2)
+        angle_1 = angleBetweenVectors(v1, v2)
+        angle_2 = angleBetweenVectors(v2, v3)
 
-        if angle > angle_threshold and len_v1 > length_threshold and len_v2 > length_threshold:
-            significant_corners += 1
+        if angle_threshold <= angle_1 or 360 - angle_threshold >= angle_1:
+            if not 180 - angle_threshold <= angle_2 <= 180 + angle_threshold:
+                if len_v2 > length_threshold:
+                    significant_corners += 1
     
     return significant_corners
 
@@ -193,14 +202,15 @@ def splitGeoTIFF(file):
             write_tiff(test_path, window2)
             write_tiff(train_path, window1)
 
-def categorizeGeoTIFFBuilding(geodata, geotiff, output):
+def categorizeGeoTIFFBuilding(geodata, geotiff, output, classes):
     """
     Creates a new GeoTIFF with categorized raster depending on the complexity of the buildings
 
     Arguments:
-        geodata (string): Path to the folder to the GeoPackage
+        geodata (string): Path to the GeoPackage
         geotiff (string): Path to the GeoTIFF
         output (string): Path to the output folder
+        classes (int): Number of classes to categorize the buildings into
     """
     gdf = gpd.read_file(geodata)
 
@@ -215,29 +225,47 @@ def categorizeGeoTIFFBuilding(geodata, geotiff, output):
 
     building_classes = []
 
-    for _, row in gdf.iterrows():
+    for _, row in tqdm(gdf.iterrows(), total=gdf.shape[0], desc="Geometries categorized", colour="yellow"):
         poly = row.geometry
-        num_sides = countSignificantCorners(poly)
+        tolerance = 1
+        simplified_poly = poly.simplify(tolerance, preserve_topology=True)
+        num_sides = countSignificantCorners(simplified_poly)
         area = poly.area
-        if num_sides <= 6:
-            classification = "simple"
-        elif num_sides >= 12:
-            classification = "complex"
-        else:
-            classification = "medium"
-        
-        if area > 500:
-            classification = "large"
+        if classes == 3:
+            if num_sides <= 6:
+                classification = "simple"
+            elif num_sides >= 12:
+                classification = "complex"
+            else:
+                classification = "medium"
+        elif classes == 6:
+            if num_sides <= 6:
+                classification = "simple"
+            elif num_sides >= 12:
+                classification = "complex"
+            else:
+                classification = "medium"
+            if area > 500:
+                if classification == "complex":
+                    classification = "large complex"
+                else:
+                    classification = "large simple"
+            elif area < 15:
+                classification = "tiny"
 
-        if classification == "large":
+        if classification == "large complex":
             color = (0, 255, 255)
+        elif classification == "large simple":
+            color = (255, 51, 255)
+        elif classification == "tiny":
+            color = (255, 255, 255)
         elif classification == "simple":
             color = (0, 255, 0)
         elif classification == "complex":
             color = (255, 0, 0)
         else:
             color = (255, 165, 0)
-        
+
         building_classes.append((poly, color))
     
     red_band = rasterize([(poly, color[0]) for poly, color in building_classes], out_shape=out_shape, transform=transform, fill=0, dtype=np.uint8)
@@ -253,7 +281,7 @@ def categorizeGeoTIFFBuilding(geodata, geotiff, output):
 
     buildings_inside_hole = []
 
-    for building in building_classes:
+    for building in tqdm(building_classes, desc="Finding buildings inside holes", colour="yellow"):
         if any(building[0].within(hole) for hole in holes):
             buildings_inside_hole.append(building)
 

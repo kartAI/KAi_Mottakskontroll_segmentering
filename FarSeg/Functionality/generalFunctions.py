@@ -4,6 +4,7 @@
 
 import geopandas as gpd
 import os
+import pandas as pd
 from shapely.validation import make_valid
 import shutil
 import sys
@@ -134,23 +135,31 @@ def correctUTMZone(zone):
 
 def load_geopackages(folder):
     """
-    Load geometries for buildings and roads from multiple GeoPackages in a folder.
+    Load geometries for relevant map objects from multiple GeoPackages in a folder.
 
     Argument:
         folder (string): File path to the folder containing the geopackages
     
     Returns:
-        geodata (dict): Dictionary containing all the GeoDataFrames for buildings and roads
+        geodata (dict): Dictionary containing all the GeoDataFrames for relevant map objects
     """
     geopackages = [os.path.join(folder, f) for f in os.listdir(folder) if f.endswith('.gpkg')]
-    geodata = {}
+    gdfs = []
 
-    for i in range(len(geopackages)):
-        name = geopackages[i].split(".")[0].split('/')[-1].lower()
-        gdf = gpd.read_file(geopackages[i])
+    for i, filepath in enumerate(geopackages):
+        gdf = gpd.read_file(filepath)
         gdf['geometry'] = gdf['geometry'].apply(make_valid)
         gdf = gdf[gdf['geometry'].notnull() & ~gdf['geometry'].is_empty]
-        geodata[name] = gdf
+        if i == 0:
+            target_crs = gdf.crs
+        if gdf.crs != target_crs:
+            gdf = gdf.to_crs(target_crs)
+        gdfs.append(gdf)
+    
+    if gdfs:
+        geodata = {'data': gpd.GeoDataFrame(pd.concat(gdfs, ignore_index=True))}
+    else:
+        geodata = {'data': None}
     
     return geodata
 

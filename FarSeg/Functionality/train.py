@@ -38,7 +38,7 @@ def train(model, train_loader, val_loader, criterion, optimizer, num_epochs, pat
     criterion = criterion.to(device)
     scaler = torch.amp.GradScaler()
     early_stopping = EarlyStopping(patience=patience, min_delta=min_delta, save_path=save_path, model=model)
-    for i in tqdm(range(num_epochs), desc='Epochs', colour="green", leave=False):
+    for i in tqdm(range(num_epochs), desc='Epochs', colour="yellow"):
         epoch_loss = 0
         model.train()
         for batch_idx, (images, masks) in enumerate(train_loader, 1):
@@ -109,7 +109,7 @@ def validate(model, val_loader, criterion, device):
     """
     model.eval()
     val_loss = 0
-    iou_metric = JaccardIndex(task="multiclass", num_classes=3).to(device=device)
+    iou_metric = JaccardIndex(task="multiclass", num_classes=2).to(device=device)
     with torch.no_grad():
         for images, masks in val_loader:
             images, masks = images.to(device), masks.to(device)

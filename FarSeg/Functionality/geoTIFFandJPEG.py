@@ -152,7 +152,7 @@ class imageSaver():
 
         shapes_inside_holes = [shape for shape in shapes if any(shape.within(hole) for hole in holes)]
 
-        # White mask for geometries:
+        # Mask for geometries:
         main_mask = rasterize(
             [(shape, 1) for shape in shapes],
             out_shape=out_shape,
@@ -162,7 +162,7 @@ class imageSaver():
             all_touched=True
         )
 
-        # Black mask for holes:
+        # Mask for holes:
         hole_mask = rasterize(
             [(hole, 1) for hole in holes],
             out_shape=out_shape,
@@ -176,17 +176,21 @@ class imageSaver():
         main_mask[hole_mask > 0] = 0
 
         # Add shapes inside holes:
-        nested_shapes_mask = rasterize(
-            [(shape, 1) for shape in shapes_inside_holes],
-            out_shape=out_shape,
-            transform=transform,
-            fill=0,
-            dtype=np.uint8,
-            all_touched=True
-        )
+        if shapes_inside_holes:
+            nested_shapes_mask = rasterize(
+                [(shape, 1) for shape in shapes_inside_holes],
+                out_shape=out_shape,
+                transform=transform,
+                fill=0,
+                dtype=np.uint8,
+                all_touched=True
+            )
 
-        final_mask = main_mask | nested_shapes_mask
+            final_mask = main_mask | nested_shapes_mask
+        else:
+            final_mask = main_mask
 
+        # Creates white mask for shapes:
         rgb_mask[:, :, 0] = final_mask * 255
         rgb_mask[:, :, 1] = final_mask * 255
         rgb_mask[:, :, 2] = final_mask * 255

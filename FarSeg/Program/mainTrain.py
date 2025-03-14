@@ -113,64 +113,51 @@ The model will train on valid tiles only: {choice}
 """
     )
 
-    counter = 1
+    # Step 1: Generate tiles for all the GeoTIFFs
+    for i, tif in enumerate(tif_files):
+        preProcessing.generate_tiles(tif, remove=False, count=i)
+    valid_tiles = tileContainer.validate(tile_folder, choice)
+    if len(valid_tiles) == 0:
+        return
+    # Step 2: Split tiles into training and validation sets
+    train_files, val_files = preProcessing.split_data(liste=valid_tiles)
+    if train_files == None or val_files == None:
+        return
+    if len(train_files) == 0 or len(val_files) == 0:
+        return
 
-    # Loops through each GeoTIFF file:
-    for tif in tqdm(tif_files, desc='GeoTIFF files', colour="yellow"):
-        gf.log_info(log_file, f"\nTraining on GeoTIFF #{counter}\n")
-        # Step 1: Generate tile for the current GeoTIFF
-        preProcessing.generate_tiles(tif)
-        valid_tiles = tileContainer.validate(tile_folder, choice)
-        if len(valid_tiles) == 0:
-            continue
-        # Step 2: Split tiles into training and validation sets
-        train_files, val_files = preProcessing.split_data(liste=valid_tiles)
-        if train_files == None or val_files == None:
-            continue
-        if len(train_files) == 0 or len(val_files) == 0:
-            continue
-
-        gf.log_info(
-            log_file,
-            f"""
+    gf.log_info(
+        log_file,
+        f"""
 Training files: {len(train_files)}
 Validation files: {len(val_files)}
 """
         )
 
-        # Step 3: Prepare datasets and dataloaders for current tiles
-        train_dataset = MapSegmentationDataset(train_files, geopackages)
-        val_dataset = MapSegmentationDataset(val_files, geopackages)
-        train_loader = DataLoader(train_dataset, batch_size=batches, shuffle=True, num_workers=num_workers)
-        val_loader = DataLoader(val_dataset, batch_size=batches, shuffle=False, num_workers=num_workers)
-        # Step 4: Train the model on this batch of tiles
-        loss = train(
-            model=model,
-            train_loader=train_loader,
-            val_loader=val_loader,
-            criterion=criterion,
-            optimizer=optimizer,
-            num_epochs=epochs,
-            patience=patience,
-            min_delta=min_improvement,
-            save_path=os.path.join(model_path, model_name),
-            output=True,
-            log_file=log_file
-        )
-        geotiffCounter(loss)
-        # Step 5: Clear tiles in the folder to prepare for next GeoTIFF
-        del train_dataset, val_dataset, train_loader, val_loader, loss
-        gf.emptyFolder(tile_folder)
-        torch.cuda.empty_cache()
-        torch.save(model.state_dict(), os.path.join(model_path, model_name))
-        # Early stop check
-        if geotiffCounter.early_stop:
-            gf.log_info(
-                log_file,
-                f"Stopped at GeoTIFF {counter} with loss {geotiffCounter.best_score}"
-            )
-            break
-        counter += 1
+    # Step 3: Prepare datasets and dataloaders for current tiles
+    train_dataset = MapSegmentationDataset(train_files, geopackages)
+    val_dataset = MapSegmentationDataset(val_files, geopackages)
+    train_loader = DataLoader(train_dataset, batch_size=batches, shuffle=True, num_workers=num_workers)
+    val_loader = DataLoader(val_dataset, batch_size=batches, shuffle=False, num_workers=num_workers)
+    # Step 4: Train the model on this batch of tiles
+    loss = train(
+        model=model,
+        train_loader=train_loader,
+        val_loader=val_loader,
+        criterion=criterion,
+        optimizer=optimizer,
+        num_epochs=epochs,
+        patience=patience,
+        min_delta=min_improvement,
+        save_path=os.path.join(model_path, model_name),
+        output=True,
+        log_file=log_file
+    )
+    geotiffCounter(loss)
+    # Step 5: Clear tiles in the folder to prepare for next GeoTIFF
+    del train_dataset, val_dataset, train_loader, val_loader, loss
+    gf.emptyFolder(tile_folder)
+    torch.cuda.empty_cache()
     # Removes the tile_folder after training:
     if os.path.exists(tile_folder):
         shutil.rmtree(tile_folder)

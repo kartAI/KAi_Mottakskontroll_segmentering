@@ -2,17 +2,22 @@
 
 # Libraries:
 
+from collections import Counter
 import geopandas as gpd
+import glob
 import math
 import numpy as np
 import os
+import random
 import rasterio
 from rasterio.features import rasterize
 from rasterio.windows import Window
+from scipy.ndimage import label
 from shapely.geometry import Polygon, MultiPolygon
 from tqdm import tqdm
 
-import Functionality.generalFunctions as gf
+import generalFunctions as gf
+from preProcessing import preProcessor
 
 # Functions:
 
@@ -154,6 +159,63 @@ def countSignificantCorners(polygon, angle_threshold=30, length_threshold=2):
     
     return significant_corners
 
+def getNumberOfBuildings(color, files):
+    """
+    """
+    count = 0
+    for file in files:
+        counter = countColorAreas(file)
+        count += counter[color]
+    return count
+
+def getRandomFilesWithGivenAmountOfBuildings(file_dictionary, limits, colors):
+    """
+    """
+    def checkContinue(counter, limit, colors):
+        """
+        """
+        count = 0
+        valid = []
+        for key in counter:
+            if counter[key] >= limit:
+                valid.append(colors[key])
+                count += 1
+        return valid, count == len(counter)
+
+    limit = limits[0][1]
+    counter = Counter({key: 0 for key in colors if file_dictionary[colors[key]][0] > 0})
+    validated_colors = set()
+    chosenFiles = []
+
+    first = True
+    
+    for el in tqdm(limits, desc='Finding relevant files', colour='yellow'):
+        if el[0] in validated_colors:
+            continue
+        if not first:
+            validated, check = checkContinue(counter, limit, colors)
+            validated_colors.update(validated)
+            if check:
+                break
+        files = file_dictionary[el[0]][1:]
+        random.shuffle(files)
+        for file in files:
+            if not first:
+                validated, check = checkContinue(counter, limit, colors)
+                validated_colors.update(validated)
+                if check or el[0] in validated_colors:
+                    break
+            if file in chosenFiles:
+                continue
+            single_counter = countColorAreas(file)
+            if len(single_counter) != 1 and single_counter[(0, 0, 0)]:
+                del single_counter[(0, 0, 0)]
+            counter.update(single_counter)
+            chosenFiles.append(file)
+        first = False
+
+    return chosenFiles#, counter
+
 def splitGeoTIFF(file):
     """
     Function that splits a GeoTIFF into a train and test part.
@@ -207,9 +269,9 @@ def categorizeGeoTIFFBuilding(geodata, geotiff, output, classes):
     Creates a new GeoTIFF with categorized raster depending on the complexity of the buildings
 
     Arguments:
-        geodata (string): Path to the GeoPackage
-        geotiff (string): Path to the GeoTIFF
-        output (string): Path to the output folder
+        geodata (string): Path to the GeoPackage file with relevant data
+        geotiff (string): Path to the GeoTIFF file
+        output (string): Path to the file in the output folder
         classes (int): Number of classes to categorize the buildings into
     """
     gdf = gpd.read_file(geodata)
@@ -301,3 +363,109 @@ def categorizeGeoTIFFBuilding(geodata, geotiff, output, classes):
         dst.write(red_band, 1)
         dst.write(green_band, 2)
         dst.write(blue_band, 3)
+
+def getUniqueValues(filepath):
+    """
+    Fetches all unique RGB pixel values in the image
+
+    Arguments:
+        filepath (string): Path to the GeoTIFF to be analysed
+
+    Returns:
+        list[list[int]]: List of unique RGB combinations in the image
+    """
+    with rasterio.open(filepath) as src:
+        image_data = src.read()
+    
+    if image_data.shape[0] == 3:
+        rgb_image = np.dstack([image_data[0], image_data[1], image_data[2]])
+    
+    pixels = rgb_image.reshape(-1, 3)
+
+    unique_colors = set(map(tuple, pixels))
+    
+    return unique_colors
+
+def countColorAreas(filepath):
+    """
+    """
+    color_counts = Counter()
+
+    with rasterio.open(filepath) as src:
+        image_data = src.read()
+        rgb_image = np.dstack([image_data[0], image_data[1], image_data[2]])
+        for color in getUniqueValues(filepath):
+            mask = np.all(rgb_image == color, axis=-1)
+            _, num_features = label(mask)
+            color_counts[color] += num_features
+
+    return color_counts
+
+def main(geodata, geotiff, mask, tile_folder):
+    """
+    """
+    """
+    geodata = "C:/Jakob_Marianne_2024_2025/Geopackage_Farsund/Flater/Buildings.gpkg"
+    geotiff = "C:/Jakob_Marianne_2024_2025/Ortofoto/Training/Test/Training_area_urban.tif"
+    mask = "C:/Users/jshjelse/Documents/dev/mask.tif"
+    tile_folder = "C:/Users/jshjelse/Documents/dev/Tiles"
+    """
+
+    categorizeGeoTIFFBuilding(geodata, geotiff, mask, 6)
+
+    preProcessing = preProcessor(0.7, tile_folder)
+    preProcessing.generate_tiles(mask)
+
+    color_map = {
+        (0, 0, 0): "Only background",
+        (255, 255, 255): "tiny",
+        (255, 51, 255): "large simple",
+        (0, 255, 255): "large complex",
+        (0, 255, 0): "simple",
+        (255, 165, 0): "medium",
+        (255, 0, 0): "complex"
+    }
+
+    paths = {
+        "Only background": [0],
+        "tiny": [0],
+        "large simple": [0],
+        "large complex": [0],
+        "simple": [0],
+        "medium": [0],
+        "complex": [0]
+    }
+
+    for path in tqdm(glob.glob(tile_folder + '/*.tif'), desc='Processing tiles', colour='yellow'):
+        counter = countColorAreas(path)
+        if len(counter) == 1:
+            if counter[(0, 0, 0)]:
+                paths['Only background'].append(path)
+                paths['Only background'][0] += 1
+        else:
+            for key in counter:
+                if key == (0, 0, 0):
+                    continue
+                else:
+                    paths[color_map[key]].append(path)
+                    paths[color_map[key]][0] += counter[key]
+    
+    sorted_limits = []
+
+    for key in paths:
+        if paths[key][0] == 0:
+            continue
+        elif len(sorted_limits) == 0:
+            sorted_limits.append([key, paths[key][0]])
+        elif paths[key][0] >= sorted_limits[-1][1]:
+            sorted_limits.append([key, paths[key][0]])
+        else:
+            for i in range(len(sorted_limits)):
+                if paths[key][0] < sorted_limits[i][1]:
+                    sorted_limits.append(sorted_limits[-1])
+                    for j in range(len(sorted_limits) - 1, i, -1):
+                        sorted_limits[j] = sorted_limits[j - 1]
+                    sorted_limits[i] = [key, paths[key][0]]
+                    break
+
+    return getRandomFilesWithGivenAmountOfBuildings(paths, sorted_limits, color_map)

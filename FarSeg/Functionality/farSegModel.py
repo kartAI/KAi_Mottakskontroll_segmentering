@@ -81,8 +81,8 @@ class EarlyStopping():
                     gf.log_info(log_file, "The training during this epoch for this GeoTIFF did not make the model better.")
         else:
             self.best_score = val_loss
-            self.counter = 0
             self.save_checkpoint(log_file)
+            self.counter = 0
 
     def save_checkpoint(self, log_file=None):
         """
@@ -95,70 +95,6 @@ class EarlyStopping():
             torch.save(self.model.state_dict(), self.save_path)
             if log_file != None:
                 gf.log_info(log_file, f"Model saved. {self.counter} - {self.best_score}")
-
-class geotiffStopping():
-    """
-    Instance stopping the training if no improvement has occured during the last GeoTIFFs.
-
-    Attributes:
-        patience (int): Number of epochs to wait before stopping early
-        min_delta (float): Minimum improvement in the monitored metric required to continue
-        window_size (int): Number of GeoTIFFs to consider in the early stop process, default 5
-        loss_hitory (deque): Deque object collecting the last [window_size] losses
-        counter (int): Number of epochs waited
-        best_score (float): The best achieved score by the model so far, starts like None
-        early_stop (bool): Wether or not to stop early
-    """
-    
-    def __init__(self, patience, min_delta, window_size=5):
-        """
-        Creates a new instance of geotiffStopping.
-
-        Arguments:
-            patience (int): Number of epochs to wait before stopping early
-            min_delta (flaot): Minimum improvement in the monitored metric required to continue
-            window_size (int): Number of GeoTIFFs to consider in the early stop process, default 5
-        """
-        self.patience = patience
-        self.min_delta = min_delta
-        self.window_size = window_size
-        self.loss_history = deque(maxlen=window_size)
-
-        self.counter = 0
-        self.best_score = None
-        self.early_stop = False
-
-    def __call__(self, loss, log_file=None):
-        """
-        Checks if the learning is going forward.
-        Counts the number of GeoTIFFs until the patience is passed and
-        change early_stop, that will stop the training loop.
-
-        Arguments:
-            val_loss (float): Loss values of the last validation
-            log_file (string): Path to the log file to log proress, default None
-        """
-        try:
-            if np.isnan(loss) or np.isinf(loss):
-                self.early_stop = True
-                if log_file:
-                    gf.log_info(log_file, f"Invalid loss: {loss}")
-                return
-            self.loss_history.append(loss)
-            avg_loss = np.mean(self.loss_history)
-            if self.best_score is None or avg_loss < self.best_score - self.min_delta:
-                self.best_score = avg_loss
-                self.counter = 0
-            else:
-                self.counter += 1
-                if self.counter >= self.patience:
-                    self.early_stop = True
-                    if log_file:
-                        gf.log_info(log_file, "The model is not getting better anymore.")
-        except:
-            self.early_stop = True
-            if log_file:
-                gf.log_info(log_file, f"Invalid loss: {loss}")
 
 # Function:
 

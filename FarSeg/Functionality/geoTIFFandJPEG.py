@@ -163,18 +163,19 @@ class imageSaver():
         )
 
         # Mask for holes:
-        hole_mask = rasterize(
-            [(hole, 1) for hole in holes],
-            out_shape=out_shape,
-            transform=transform,
-            fill=0,
-            dtype=np.uint8,
-            all_touched=True
-        )
-
-        # Removes holes:
-        main_mask[hole_mask > 0] = 0
-
+        if holes:
+            hole_mask = rasterize(
+                [(hole, 1) for hole in holes],
+                out_shape=out_shape,
+                transform=transform,
+                fill=0,
+                dtype=np.uint8,
+                all_touched=True
+            )
+            # Removes holes:
+            if hole_mask.any():
+                main_mask[hole_mask > 0] = 0
+        
         # Add shapes inside holes:
         if shapes_inside_holes:
             nested_shapes_mask = rasterize(

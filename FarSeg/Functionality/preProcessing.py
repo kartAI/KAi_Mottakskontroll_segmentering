@@ -71,10 +71,10 @@ class MapSegmentationDataset(Dataset):
             geometries = {}
             masks = {}
             # Combine the masks into a single-channel label:
-            # (0: background, 1: buildings, 2: roads, etc.)
+            # (0: background, 1: object type)
             label_mask = np.zeros(out_shape, dtype=np.uint8) # Initialize background as class 0
             for val, objtype in enumerate(self.geodata):
-                # Reproject geometries to math the CRS of the current GeoTIFF:
+                # Reproject geometries to match the CRS of the current GeoTIFF:
                 geometries[objtype] = self.geodata[objtype].to_crs(src.crs)['geometry'].values
                 # Rasterize the geometries for each class:
                 masks[objtype] = geometry_mask(geometries[objtype], transform=transform, invert=True, out_shape=out_shape)
@@ -154,13 +154,11 @@ class preProcessor():
                     tile_data = padded_tile
                 # Adjust the transform for the current tile:
                 new_transform = metadata["transform"] * rasterio.Affine.translation(x_start, y_start)
-                # Checks if the tile contains any valid data:
-                # if tile_contains_valid_data(tile_data, metadata.get("nodata", 0)):
                 # Defines output filename:
-                if not count:
-                    filename = os.path.join(self.output, f"tile_{i}_{j}.tif")
-                else:
+                if count:
                     filename = os.path.join(self.output, f"tile_{count}_{i}_{j}.tif")
+                else:
+                    filename = os.path.join(self.output, f"tile_{i}_{j}.tif")
                 # Saves the tile:
                 self.save_tile(tile_data, new_transform, metadata, filename)
         return count_x * count_y
@@ -181,7 +179,7 @@ class preProcessor():
             'width': tile_data.shape[1],
             'transform': transform
         })
-        # Chck for correct order:
+        # Check for correct order:
         if tile_data.shape == (1024, 1024, 3):
             tile_data = np.transpose(tile_data, (2, 0, 1))
         # Write the tile to a new GeoTIFF:

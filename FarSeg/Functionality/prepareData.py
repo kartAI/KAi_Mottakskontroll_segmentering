@@ -1,4 +1,4 @@
-# FarSeg/prepareData.py
+# FarSeg/Functionality/prepareData.py
 
 # Libraries:
 
@@ -8,75 +8,19 @@ import glob
 import math
 import numpy as np
 import os
-import random
 import rasterio
 from rasterio.features import rasterize
-from rasterio.windows import Window
+from rasterio.windows import from_bounds
 from scipy.ndimage import label
 from shapely.geometry import Polygon, MultiPolygon
+import shutil
 from tqdm import tqdm
 
 import generalFunctions as gf
+from geoTIFFandJPEG import imageSaver
 from preProcessing import preProcessor
 
 # Functions:
-
-def validRatio(string):
-    """
-    Function ensuring correct split-ratio.
-
-    Argument:
-        string (string): User input to check for split-ratio
-
-    Returns:
-        bool: True if correct, otherwise False
-    """
-    string = string.replace(" ", "")
-    try:
-        numbers = string.split("-")
-        if len(numbers) != 2:
-            return False
-        for num in numbers:
-            if not int(num):
-                return False
-            if int(num) <= 0:
-                return False
-            if int(num) >= 100:
-                return False
-        if int(numbers[0]) + int(numbers[1]) != 100:
-            return False
-        return True
-    except:
-        return False
-
-def correctDirecton(string):
-    """
-    Funtion checking correct split-direction.
-
-    Argument:
-        string (string): User input to check for direction
-    
-    Returns:
-        bool: True if correct, otherwise False
-    """
-    if string.lower()[0] in ['v', 'h']:
-        return True
-    return False
-
-def fetchDirection(string):
-    """
-    Function returning correct direction.
-
-    Argument:
-        string (string): User input
-    
-    Returns:
-        string: Correct string
-    """
-    if string.lower()[0] == 'v':
-        return 'vertical'
-    else:
-        return 'horizontal'
 
 def getExteriors(geom):
     """
@@ -158,111 +102,6 @@ def countSignificantCorners(polygon, angle_threshold=30, length_threshold=2):
                     significant_corners += 1
     
     return significant_corners
-
-def getNumberOfBuildings(color, files):
-    """
-    """
-    count = 0
-    for file in files:
-        counter = countColorAreas(file)
-        count += counter[color]
-    return count
-
-def getRandomFilesWithGivenAmountOfBuildings(file_dictionary, limits, colors):
-    """
-    """
-    def checkContinue(counter, limit, colors):
-        """
-        """
-        count = 0
-        valid = []
-        for key in counter:
-            if counter[key] >= limit:
-                valid.append(colors[key])
-                count += 1
-        return valid, count == len(counter)
-
-    limit = limits[0][1]
-    counter = Counter({key: 0 for key in colors if file_dictionary[colors[key]][0] > 0})
-    validated_colors = set()
-    chosenFiles = []
-
-    first = True
-    
-    for el in tqdm(limits, desc='Finding relevant files', colour='yellow'):
-        if el[0] in validated_colors:
-            continue
-        if not first:
-            validated, check = checkContinue(counter, limit, colors)
-            validated_colors.update(validated)
-            if check:
-                break
-        files = file_dictionary[el[0]][1:]
-        random.shuffle(files)
-        for file in files:
-            if not first:
-                validated, check = checkContinue(counter, limit, colors)
-                validated_colors.update(validated)
-                if check or el[0] in validated_colors:
-                    break
-            if file in chosenFiles:
-                continue
-            single_counter = countColorAreas(file)
-            if len(single_counter) != 1 and single_counter[(0, 0, 0)]:
-                del single_counter[(0, 0, 0)]
-            counter.update(single_counter)
-            chosenFiles.append(file)
-        first = False
-
-    return chosenFiles#, counter
-
-def splitGeoTIFF(file):
-    """
-    Function that splits a GeoTIFF into a train and test part.
-
-    Argument:
-        file (string): Path to the GeoTIFF that are going to be splitted
-    """
-    ratio = gf.get_valid_input("Which ratio will you split the GeoTIFF in(?): ", validRatio)
-    direction = fetchDirection(gf.get_valid_input("Will you split it vertically (v) or horizontally (h)(?): ", correctDirecton))
-
-    ratio1, ratio2 = map(int, ratio.split('-'))
-    total = ratio1 + ratio2
-    frac1 = ratio1/total
-
-    with rasterio.open(file) as src:
-        width, height = src.width, src.height
-        train_path = os.path.splitext(file)[0] + "_train.tif"
-        test_path = os.path.splitext(file)[0] + "_test.tif"
-        if direction == "vertical":
-            split_col = int(width * frac1)
-            window1 = Window(0, 0, split_col, height)
-            window2 = Window(split_col, 0, width - split_col, height)
-        else:
-            split_row = int(height * frac1)
-            window1 = Window(0, 0, width, split_row)
-            window2 = Window(0, split_row, width, height - split_row)
-        
-        def write_tiff(dst_path, window):
-            with rasterio.open(
-                dst_path,
-                'w',
-                driver=src.driver,
-                height=window.height,
-                width=window.width,
-                count=src.count,
-                dtype=src.dtypes[0],
-                crs=src.crs,
-                transform=src.window_transform(window)
-            ) as dst:
-                dst.write(src.read(window=window))
-        
-        if ratio1 < ratio2:
-            write_tiff(test_path, window1)
-            write_tiff(train_path, window2)
-        else:
-            write_tiff(test_path, window2)
-            write_tiff(train_path, window1)
 
 def categorizeGeoTIFFBuilding(geodata, geotiff, output, classes):
     """
@@ -353,9 +192,10 @@ def categorizeGeoTIFFBuilding(geodata, geotiff, output, classes):
         green_band[hole_mask > 0] = 0
         blue_band[hole_mask > 0] = 0
 
-    red_band |= rasterize([(poly, color[0]) for poly, color in buildings_inside_hole], out_shape=out_shape, transform=transform, fill=0, dtype=np.uint8)
-    green_band |= rasterize([(poly, color[1]) for poly, color in buildings_inside_hole], out_shape=out_shape, transform=transform, fill=0, dtype=np.uint8)
-    blue_band |= rasterize([(poly, color[2]) for poly, color in buildings_inside_hole], out_shape=out_shape, transform=transform, fill=0, dtype=np.uint8)
+    if buildings_inside_hole:
+        red_band |= rasterize([(poly, color[0]) for poly, color in buildings_inside_hole], out_shape=out_shape, transform=transform, fill=0, dtype=np.uint8)
+        green_band |= rasterize([(poly, color[1]) for poly, color in buildings_inside_hole], out_shape=out_shape, transform=transform, fill=0, dtype=np.uint8)
+        blue_band |= rasterize([(poly, color[2]) for poly, color in buildings_inside_hole], out_shape=out_shape, transform=transform, fill=0, dtype=np.uint8)
 
     with rasterio.open(output, 'w', driver="GTiff",
                        height=out_shape[0], width=out_shape[1], count=3,
@@ -388,6 +228,13 @@ def getUniqueValues(filepath):
 
 def countColorAreas(filepath):
     """
+    Count number of areas with specific colors in a raster.
+
+    Argument:
+        filepath (string): Path to the relevant file
+
+    Returns:
+        color_counts (Counter): Counter object with the number of each occurences of each building type
     """
     color_counts = Counter()
 
@@ -401,20 +248,26 @@ def countColorAreas(filepath):
 
     return color_counts
 
-def main(geodata, geotiff, mask, tile_folder):
+def fetchCategorizedTiles(geodata, geotiff, mask, tile_folder, count):
     """
+    Function creating a new raster by categorizing all the buildings, and then split it strategically.
+    When the categorized raster is splitted, it splits the aerial image into the same tiles.
+
+    Arguments:
+        geodata (string): Path to the relevant GeoPackage file
+        geotiff (string): Path to the relevant GeoTIFF file
+        mask (string): Path to the categorized GeoTIFF to be created
+        tile_folder (string): Path to the folder where other folders with tiles (categorized and aerial images) are going to be created
+        count (int): The number in the series of GeoTIFFs to be used in the training process
     """
-    """
-    geodata = "C:/Jakob_Marianne_2024_2025/Geopackage_Farsund/Flater/Buildings.gpkg"
-    geotiff = "C:/Jakob_Marianne_2024_2025/Ortofoto/Training/Test/Training_area_urban.tif"
-    mask = "C:/Users/jshjelse/Documents/dev/mask.tif"
-    tile_folder = "C:/Users/jshjelse/Documents/dev/Tiles"
-    """
+
+    tile_folder_categorized = tile_folder + f"/Categorized_{count}"
+    tile_folder_original = tile_folder + f"/Original_{count}"
+    
+    gf.emptyFolder(tile_folder_categorized)
+    gf.emptyFolder(tile_folder_original)
 
     categorizeGeoTIFFBuilding(geodata, geotiff, mask, 6)
-
-    preProcessing = preProcessor(0.7, tile_folder)
-    preProcessing.generate_tiles(mask)
 
     color_map = {
         (0, 0, 0): "Only background",
@@ -426,46 +279,79 @@ def main(geodata, geotiff, mask, tile_folder):
         (255, 0, 0): "complex"
     }
 
-    paths = {
-        "Only background": [0],
-        "tiny": [0],
-        "large simple": [0],
-        "large complex": [0],
-        "simple": [0],
-        "medium": [0],
-        "complex": [0]
-    }
+    def saveTile(x, y, jump, data, metadata, tile_folder):
+        # Estimates the window:
+        x_end, y_end = x + jump, y + jump
+        if x_end > metadata["width"]: # Ensures no no data values
+            x_end = metadata["width"]
+        if y_end > metadata["height"]:
+            y_end = metadata["height"]
+        x_start, y_start = x_end - jump, y_end - jump # Ensures always 1024 x 1024 size
+        # Extracts the tile data from the numpy array:
+        tile_data = data[y_start:y_end, x_start:x_end]
+        # Adjust the transform for the current tile:
+        new_transform = metadata["transform"] * rasterio.Affine.translation(x_start, y_start)
+        # Saves the tile:
+        filename = os.path.join(tile_folder, f"tile_{1}_{x_start}_{y_start}.tif")
+        preProcessing.save_tile(tile_data, new_transform, metadata, filename)
+        return filename
 
-    for path in tqdm(glob.glob(tile_folder + '/*.tif'), desc='Processing tiles', colour='yellow'):
-        counter = countColorAreas(path)
-        if len(counter) == 1:
-            if counter[(0, 0, 0)]:
-                paths['Only background'].append(path)
-                paths['Only background'][0] += 1
-        else:
-            for key in counter:
-                if key == (0, 0, 0):
-                    continue
+    imageHandler = imageSaver()
+    preProcessing = preProcessor(0, "")
+    data, metadata = imageHandler.readGeoTIFF(mask)
+    jump = 1024 # Each tile should be 1024 x 1024 pixels
+    x, y = 0, 0
+    with tqdm(total=int(metadata["height"]), desc="Creating tiles", colour="yellow") as pbar:
+        while y < metadata["height"] - jump:
+            while x < metadata["width"] - jump:
+                filename = saveTile(x, y, jump, data, metadata, tile_folder_categorized)
+                # Finds buildings types represented in the tile:
+                colors = countColorAreas(filename)
+                importance = 1
+                for key in colors:
+                    if color_map[key] in ["large simple", "large complex"]:
+                        importance = 3
+                    if color_map[key] == "Only background" and len(colors) == 1:
+                        importance = 2
+                if importance == 3:
+                    saveTile(
+                        x,
+                        y - int(0.25 * jump) if (y - int(0.25 * jump)) >= 0 else 0,
+                        jump, data, metadata, tile_folder_categorized
+                    )
+                    saveTile(
+                        x,
+                        y + int(0.25 * jump) if (y + int(0.25 * jump)) >= metadata["height"] else metadata["height"],
+                        jump, data, metadata, tile_folder_categorized
+                    )
+                if importance == 3:
+                    x += int(jump * 0.25)
+                elif importance == 2:
+                    x += jump
                 else:
-                    paths[color_map[key]].append(path)
-                    paths[color_map[key]][0] += counter[key]
+                    x += int(jump * 0.75)
+            y += jump
+            x = 0
+            pbar.update(jump)
     
-    sorted_limits = []
+    with rasterio.open(geotiff) as src:
+        for file in tqdm(glob.glob(tile_folder_categorized + "/*.tif"), desc="Saves tiles as aerial images", colour="yellow"):
+            with rasterio.open(file) as tile:
+                # Fetches the boundings of the categorized tile:
+                bounds = tile.bounds
+                # Defines window to crop image:
+                window = from_bounds(*bounds, transform=src.transform)
+                new_transform = src.window_transform(window)
+                # Fetch the data:
+                data = np.transpose(src.read(window=window), (1, 2, 0))
+                # Update transform:
+                metadata = src.meta.copy()
+                metadata["profile"] = src.profile
+                # Save the new tile of the aerial image:
+                out_file = os.path.join(tile_folder_original, os.path.basename(file))
+                preProcessing.save_tile(data, new_transform, metadata, out_file)
 
-    for key in paths:
-        if paths[key][0] == 0:
-            continue
-        elif len(sorted_limits) == 0:
-            sorted_limits.append([key, paths[key][0]])
-        elif paths[key][0] >= sorted_limits[-1][1]:
-            sorted_limits.append([key, paths[key][0]])
-        else:
-            for i in range(len(sorted_limits)):
-                if paths[key][0] < sorted_limits[i][1]:
-                    sorted_limits.append(sorted_limits[-1])
-                    for j in range(len(sorted_limits) - 1, i, -1):
-                        sorted_limits[j] = sorted_limits[j - 1]
-                    sorted_limits[i] = [key, paths[key][0]]
-                    break
+    if os.path.exists(tile_folder_categorized):
+        shutil.rmtree(tile_folder_categorized)
 
-    return getRandomFilesWithGivenAmountOfBuildings(paths, sorted_limits, color_map)
+    return glob.glob(tile_folder_original + "/*.tif")

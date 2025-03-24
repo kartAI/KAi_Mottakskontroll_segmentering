@@ -12,13 +12,13 @@ import generalFunctions as gf
 
 # Functions:
 
-def train(model, train_loader, val_loader, criterion, optimizer, num_epochs, patience, min_delta, save_path=None, output=False, log_file=None):
+def train(model, train_loaders, val_loader, criterion, optimizer, num_epochs, patience, min_delta, save_path=None, output=False, log_file=None):
     """
     Training loop for FarSeg segmentation model.
 
     Arguments:
         model (torch.models.FarSeg): Model to be trained
-        train_loader (DataLoader): The data used to train the model
+        train_loaders (list[DataLoader]): The data used to train the model
         val_loader (DataLoader): The data used to validate the model
         criterion (torch.nn.CrossEntropyLoss): The loss function used for training, suitable for multi-class classification tasks
         optimizer (torch.optim.Adam): The optimizer for updating the model parameters during training, configured with the specified learning rate
@@ -41,35 +41,36 @@ def train(model, train_loader, val_loader, criterion, optimizer, num_epochs, pat
     for i in tqdm(range(num_epochs), desc='Epochs', colour="yellow"):
         epoch_loss = 0
         model.train()
-        for batch_idx, (images, masks) in enumerate(train_loader, 1):
-            images, masks = images.to(device), masks.to(device)
-            optimizer.zero_grad()
-            # Ensures masks are 3D (batch_size, height, width):
-            if masks.dim() == 4:
-                masks = masks.squeeze(1) # Remove the channel dimension if it exists
-            # Convert masks to LongTensor for the loss function:
-            masks = masks.long()
-            with torch.amp.autocast(device_type='cuda', dtype=torch.bfloat16):
-                outputs = model(images) # Forward pass
-                # output shapes: (batch_size, num_classes, height, width)
-                # mask shapes: (batch_size, height, width), with class indices: (0: background, 1: buildings, etc.)
-                # Calculates loss:
-                loss = criterion(outputs, masks)
-            # Scale the loss:
-            scaled_loss = scaler.scale(loss)
-            # Backward pass with scaled loss:
-            scaled_loss.backward()
-            scaler.step(optimizer)
-            scaler.update()
-            epoch_loss += loss.item()
-            # Clear CUDA cache to prevent memory buildup:
-            del images, masks, outputs, loss
-            torch.cuda.empty_cache()
-            torch.cuda.synchronize()
+        for train_loader in train_loaders:
+            for (images, masks) in train_loader: # for _, (images, masks) in enumerate(train_loader, 1):
+                images, masks = images.to(device), masks.to(device)
+                optimizer.zero_grad()
+                # Ensures masks are 3D (batch_size, height, width):
+                if masks.dim() == 4:
+                    masks = masks.squeeze(1) # Remove the channel dimension if it exists
+                # Convert masks to LongTensor for the loss function:
+                masks = masks.long()
+                with torch.amp.autocast(device_type='cuda', dtype=torch.bfloat16):
+                    outputs = model(images) # Forward pass
+                    # output shapes: (batch_size, num_classes, height, width)
+                    # mask shapes: (batch_size, height, width), with class indices: (0: background, 1: object type)
+                    # Calculates loss:
+                    loss = criterion(outputs, masks)
+                # Scale the loss:
+                scaled_loss = scaler.scale(loss)
+                # Backward pass with scaled loss:
+                scaled_loss.backward()
+                scaler.step(optimizer)
+                scaler.update()
+                epoch_loss += loss.item()
+                # Clear CUDA cache to prevent memory buildup:
+                del images, masks, outputs, loss
+                torch.cuda.empty_cache()
+                torch.cuda.synchronize()
         # Validate at the end of each epoch:
         avg_train_loss = epoch_loss / len(train_loader)
         avg_val_loss, avg_iou = validate(model, val_loader, criterion, device)
-        if log_file != None and (i+1) % (num_epochs * 0.1) == 0:
+        if log_file != None:
             gf.log_info(
                 log_file,
                 f"""

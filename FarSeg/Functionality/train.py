@@ -119,7 +119,7 @@ def validate(model, val_loader, criterion, device):
                 masks = masks.squeeze(1) # Remove the channel dimension if it exists
             # Convert masks to LongTensor for the loss function:
             masks = masks.long()
-            with torch.amp.autocast(device_type='cuda'):
+            with torch.amp.autocast(device_type='cuda', dtype=torch.bfloat16):
                 outputs = model(images) # Forward pass
                 # Calculate loss:
                 loss = criterion(outputs, masks)

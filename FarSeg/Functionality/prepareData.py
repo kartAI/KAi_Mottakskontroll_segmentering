@@ -204,6 +204,55 @@ def categorizeGeoTIFFBuilding(geodata, geotiff, output, classes):
         dst.write(green_band, 2)
         dst.write(blue_band, 3)
 
+def categorizeGeoTIFFRoads(geodata, geotiff, output):
+    """
+    """
+    gdf = gpd.read_file(geodata)
+
+    with rasterio.open(geotiff) as src:
+        transform = src.transform
+        out_shape = [src.height, src.width]
+        crs = src.crs
+
+    road_classes = []
+    color_map = {
+        'S': (0, 255, 255),
+        'P': (255, 51, 255),
+        'K': (255, 165, 0),
+        'F': (0, 255, 0)
+    }
+
+    for _, row in tqdm(gdf.iterrows(), total=gdf.shape[0], desc="Geometries categorized", colour="yellow"):
+        poly = row.geometry
+        category = row.vegkategori
+        color = color_map[category]
+        
+        road_classes.append((poly, color))
+    
+    red_band = rasterize([(poly, color[0]) for poly, color in road_classes], out_shape=out_shape, transform=transform, fill=0, dtype=np.uint8)
+    green_band = rasterize([(poly, color[1]) for poly, color in road_classes], out_shape=out_shape, transform=transform, fill=0, dtype=np.uint8)
+    blue_band = rasterize([(poly, color[2]) for poly, color in road_classes], out_shape=out_shape, transform=transform, fill=0, dtype=np.uint8)
+
+    holes = [
+        Polygon(interior)
+        for poly, _ in road_classes
+        for single_poly in (poly.geoms if poly.geom_type == "MultiPolygon" else [poly])
+        for interior in single_poly.interiors
+    ]
+
+    if holes:
+        hole_mask = rasterize([(hole, 255) for hole in holes], out_shape=out_shape, transform=transform, fill=0, dtype=np.uint8)
+        red_band[hole_mask > 0] = 0
+        green_band[hole_mask > 0] = 0
+        blue_band[hole_mask > 0] = 0
+    
+    with rasterio.open(output, 'w', driver="GTiff",
+                       height=out_shape[0], width=out_shape[1], count=3,
+                       dtype=np.uint8, crs=crs, transform=transform) as dst:
+        dst.write(red_band, 1)
+        dst.write(green_band, 2)
+        dst.write(blue_band, 3)
+
 def getUniqueValues(filepath):
     """
     Fetches all unique RGB pixel values in the image
@@ -248,7 +297,7 @@ def countColorAreas(filepath):
 
     return color_counts
 
-def fetchCategorizedTiles(geodata, geotiff, mask, tile_folder, count):
+def fetchCategorizedTiles(geodata, geotiff, mask, tile_folder, count, object_type):
     """
     Function creating a new raster by categorizing all the buildings, and then split it strategically.
     When the categorized raster is splitted, it splits the aerial image into the same tiles.
@@ -259,6 +308,7 @@ def fetchCategorizedTiles(geodata, geotiff, mask, tile_folder, count):
         mask (string): Path to the categorized GeoTIFF to be created
         tile_folder (string): Path to the folder where other folders with tiles (categorized and aerial images) are going to be created
         count (int): The number in the series of GeoTIFFs to be used in the training process
+        object_type (string): String telling what kind of object type that is beeing analysed
     """
 
     tile_folder_categorized = tile_folder + f"/Categorized_{count}"
@@ -267,16 +317,19 @@ def fetchCategorizedTiles(geodata, geotiff, mask, tile_folder, count):
     gf.emptyFolder(tile_folder_categorized)
     gf.emptyFolder(tile_folder_original)
 
-    categorizeGeoTIFFBuilding(geodata, geotiff, mask, 6)
+    if object_type == "buildings":
+        categorizeGeoTIFFBuilding(geodata, geotiff, mask, 6)
+    elif object_type == "roads":
+        categorizeGeoTIFFRoads(geodata, geotiff, mask)
 
     color_map = {
         (0, 0, 0): "Only background",
-        (255, 255, 255): "tiny",
-        (255, 51, 255): "large simple",
-        (0, 255, 255): "large complex",
-        (0, 255, 0): "simple",
-        (255, 165, 0): "medium",
-        (255, 0, 0): "complex"
+        (255, 255, 255): "Simple",
+        (255, 51, 255): "Complex",
+        (0, 255, 255): "Complex",
+        (0, 255, 0): "Simple",
+        (255, 165, 0): "Simple",
+        (255, 0, 0): "Simple"
     }
 
     def saveTile(x, y, jump, data, metadata, tile_folder):
@@ -309,7 +362,7 @@ def fetchCategorizedTiles(geodata, geotiff, mask, tile_folder, count):
                 colors = countColorAreas(filename)
                 importance = 1
                 for key in colors:
-                    if color_map[key] in ["large simple", "large complex"]:
+                    if color_map[key] == "Complex":
                         importance = 3
                     if color_map[key] == "Only background" and len(colors) == 1:
                         importance = 2
@@ -350,8 +403,5 @@ def fetchCategorizedTiles(geodata, geotiff, mask, tile_folder, count):
                 # Save the new tile of the aerial image:
                 out_file = os.path.join(tile_folder_original, os.path.basename(file))
                 preProcessing.save_tile(data, new_transform, metadata, out_file)
-
-    if os.path.exists(tile_folder_categorized):
-        shutil.rmtree(tile_folder_categorized)
 
     return glob.glob(tile_folder_original + "/*.tif")

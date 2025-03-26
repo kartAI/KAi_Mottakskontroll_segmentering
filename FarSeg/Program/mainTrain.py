@@ -41,6 +41,8 @@ def mainTrain():
     tile_folder = gf.get_valid_input("Where should the tiles be saved(?): ", gf.emptyFolder)
     # Folder where all the validation files are stored:
     validation_folder = gf.get_valid_input("Where are the folder to the GeoTIFF(s) used for validation stored(?): ", gf.doesPathExists)
+    # Define tpe of object to analyze:
+    object_type = gf.get_valid_input("What kind of object type are you analyzing(?) (buildings/roads): ", gf.correctObjectType)
     # Loads the GeoPackages:
     geodata_gpkg = [f for f in os.listdir(geodata_folder) if f.endswith('.gpkg')]
     geodata_tif = [f for f in os.listdir(geodata_folder) if f.endswith('.tif') and f.replace('.tif', '.gpkg') not in geodata_gpkg]
@@ -84,7 +86,7 @@ def mainTrain():
         log_file,
         f"""
 ######################################
-Training of a new FarSeg model started\n######################################\n
+Training of a new FarSeg model for {object_type} started\n######################################\n
 Input data:\n
 Geopackage folder: {geodata_folder}
 GeoTIFF folder: {geotiff_folder}
@@ -123,7 +125,8 @@ File: {model_name}
             geotiff,
             f"{tile_folder}/mask_{i + 1}.tif",
             tile_folder,
-            i + 1
+            i + 1,
+            object_type
         )
         if train_files == None or len(train_files) == 0:
             return

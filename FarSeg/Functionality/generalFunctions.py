@@ -132,6 +132,12 @@ def correctUTMZone(zone):
     valid_zones = ["32N", "33N", "35N"]
     return zone in valid_zones
 
+def correctObjectType(obj):
+    """
+    """
+    valid_objects = ["buildings", "roads"]
+    return obj.lower() in valid_objects
+
 def load_geopackages(folder):
     """
     Load geometries for relevant map objects from multiple GeoPackages in a folder.

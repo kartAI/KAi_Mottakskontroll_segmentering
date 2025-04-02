@@ -13,7 +13,6 @@ from rasterio.features import rasterize
 from rasterio.windows import from_bounds
 from scipy.ndimage import label
 from shapely.geometry import Polygon, MultiPolygon
-import shutil
 from tqdm import tqdm
 
 import generalFunctions as gf

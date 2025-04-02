@@ -175,11 +175,6 @@ Total length of boundaries (segmented / correct): {segmented_boundaries} / {mask
 {f'Total length of centerlines (segmented / correct): {segmented_lines} / {mask_lines} = {segmented_lines / mask_lines}' if isRoad else ''}
 """
 )
-        gf.emptyFolder(mask_folder)
-        if os.path.exists(merged_original):
-            os.remove(merged_original)
-        if os.path.exists(merged_segmented):
-            os.remove(merged_segmented)
 
 # Helper functions:
 

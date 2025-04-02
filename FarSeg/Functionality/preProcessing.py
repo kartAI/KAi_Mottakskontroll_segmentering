@@ -162,6 +162,45 @@ class preProcessor():
                 # Saves the tile:
                 self.save_tile(tile_data, new_transform, metadata, filename)
         return count_x * count_y
+    
+    def generate_tiles_2(self, geotiff, remove=True, count=False):
+        """
+        Splits a GeoTIFF into tiles and saves it in specified folder.
+
+        Arguments:
+            geotiff (string): Path to the GeoTIFF to split
+            remove (bool): Telling if the tile folder should be emptied before new ones are generated, default True
+            count (int): Integer used for file names of saved tiles, default False
+
+        Returns:
+            int: Number of generated tiles (tiles_x-direction * tiles_y-direction)
+        """
+        if remove:
+            gf.emptyFolder(self.output)
+        imageHandler = imageSaver()
+        data, metadata = imageHandler.readGeoTIFF(geotiff)
+        count_x = (metadata["width"] + self.width - 1) // self.width
+        count_y = (metadata["height"] + self.height - 1) // self.height
+        # Iterates over the grid without overlap:
+        for i in range(count_y):
+            for j in range(count_x):
+                # Calculates the window position without overlap:
+                x_end = min((j+1) * self.width, metadata["width"])
+                y_end = min((i+1) * self.height, metadata["height"])
+                x_start = x_end - self.width
+                y_start = y_end - self.height
+                # Extracts the tile data from the numpy array:
+                tile_data = data[y_start:y_end, x_start:x_end]
+                # Adjust the transform for the current tile:
+                new_transform = metadata["transform"] * rasterio.Affine.translation(x_start, y_start)
+                # Defines output filename:
+                if count:
+                    filename = os.path.join(self.output, f"tile_{count}_{i}_{j}.tif")
+                else:
+                    filename = os.path.join(self.output, f"tile_{i}_{j}.tif")
+                # Saves the tile:
+                self.save_tile(tile_data, new_transform, metadata, filename)
+        return count_x * count_y
 
     def save_tile(self, tile_data, transform, metadata, filename):
         """

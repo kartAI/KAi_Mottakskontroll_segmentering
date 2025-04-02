@@ -2,6 +2,7 @@
 
 # Libraries:
 
+import cv2
 import numpy as np
 import os
 import re
@@ -77,20 +78,24 @@ class postProcessor():
             row, col = parse_tile_filename(geotiff_file)
             # Merge original image by fetching data:
             image_data, _ = imageHandler.readGeoTIFF(os.path.join(self.geotiff_folder, geotiff_file))
+            start_row, start_col = row * tile_height, col * tile_width
+            end_row, end_col = start_row + tile_height, start_col + tile_width
+            adjust_row, adjust_col = 0, 0
+            if end_row > original_size[0]:
+                adjust_row = end_row - original_size[0]
+                end_row = original_size[0]
+            if end_col > original_size[1]:
+                adjust_col = end_col - original_size[1]
+                end_col = original_size[1]
             for band in range(3):
-                full_original_image[
-                    row * tile_height : (row + 1) * tile_height,
-                    col * tile_width  : (col + 1) * tile_width,
-                    band
-                ] = image_data[:, :, band]
+                full_original_image[start_row:end_row, start_col:end_col, band] = image_data[adjust_row:, adjust_col:, band]
             # Merge segmented image by fetching data:
             image_data, _ = imageHandler.readGeoTIFF(os.path.join(self.segmented_folder, segmented_file))
+            tile_h, tile_w, _ = image_data.shape
+            start_row, start_col = row * tile_height, col * tile_width
+            end_row, end_col = start_row + tile_h, start_col + tile_w
             for band in range(3):
-                full_segmented_image[
-                    row * tile_height : (row + 1) * tile_height,
-                    col * tile_width  : (col + 1) * tile_width,
-                    band
-                ] = image_data[:, :, band]
+                full_segmented_image[start_row:end_row, start_col:end_col, band] = image_data[:, :, band]
         # Crop to the specified original size:
         crop_height, crop_width = original_size
         cropped_original_image = full_original_image[:crop_height, :crop_width, :]
@@ -135,3 +140,17 @@ def parse_tile_filename(filename, segmented=False):
         if segmented:
             raise ValueError(f"Filename  {filename} does not match expected pattern 'tile_<row>_<col>_segmented.tif")
         raise ValueError(f"Filename  {filename} does not match expected pattern 'tile_<row>_<col>.tif")
+
+def remove_noise(mask):
+        """
+        ...
+        """
+        if np.all(mask == 0):
+            return mask
+        gray = cv2.cvtColor(mask, cv2.COLOR_RGB2GRAY)
+        contours, _ = cv2.findContours(gray, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        cleaned_mask = np.zeros_like(mask)
+        for contour in contours:
+            if cv2.contourArea(contour) >= 750:
+                cv2.drawContours(cleaned_mask, [contour], -1, (255, 255, 255), thickness=cv2.FILLED)
+        return cleaned_mask

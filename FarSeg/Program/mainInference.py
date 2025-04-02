@@ -17,7 +17,7 @@ sys.path.append(project_root)
 from Functionality import generalFunctions as gf
 from Functionality.farSegModel import initialize_model
 from Functionality.geoTIFFandJPEG import imageSaver
-from Functionality.postProcessing import postProcessor
+from Functionality.postProcessing import postProcessor, remove_noise
 from Functionality.preProcessing import preProcessor, tile_contains_valid_data, geotiff_to_geopackage
 
 # Function:
@@ -72,7 +72,6 @@ Saves as jpg as well: {choice}
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     gf.log_info(log_file, f"\nDevice: {device}\n")
     geodata = gf.load_geopackages(geodata_folder) # {"Building": [...], "Roads": [...], ...}
-    original_crs = list(geodata.values())[0].crs
     # Load the trained model:
     num_classes = len(geodata) + 1
     model, _, _ = initialize_model(num_classes)
@@ -96,10 +95,8 @@ Saves as jpg as well: {choice}
         _, info = imageHandler.readGeoTIFF(path)
         original_size = (info["height"], info["width"])
         image_crs = info["crs"]
-        if image_crs != original_crs:
-            image_crs = original_crs
         # Step 1: Generate tiles from the input GeoTIFF
-        tileGenerator.generate_tiles(path)
+        tileGenerator.generate_tiles_2(path)
         splitted_geotiffs = [os.path.join(tile_folder, f) for f in os.listdir(tile_folder) if f.endswith('.tif')]
         # Step 2: Iterate over all the tiles
         for _, geotiff in enumerate(tqdm(splitted_geotiffs, desc=f"Tiles processed for GeoTIFF {k+1}", colour="green", leave=False)):
@@ -133,12 +130,24 @@ Saves as jpg as well: {choice}
             segmented_image_rgb = predicted_segmented_mask
             if boolean:
                 segmented_image_rgb = colors[predicted_segmented_mask]
+                segmented_image_rgb = remove_noise(segmented_image_rgb)
             metadata["profile"].update({
                 'count': 3, # 3 channels for RGB
                 'dtype': 'uint8',
                 'photometric': 'RGB',
                 'crs': image_crs
             })
+            # Extra:
+            # Crop output if it is the end of the image
+            x, y = int(geotiff.split('_')[-1].split('.')[0]) == ((original_size[1] + 1023) // 1024) - 1, int(geotiff.split('_')[-2]) == ((original_size[0] + 1023) // 1024) - 1
+            if x or y:
+                x_start, x_end = 1024 - (original_size[1] - int(geotiff.split('_')[-1].split('.')[0]) * 1024) if x else 0, metadata["width"]
+                y_start, y_end = 1024 - (original_size[0] - int(geotiff.split('_')[-2]) * 1024) if y else 0, metadata["height"]
+                segmented_image_rgb = segmented_image_rgb[y_start:y_end, x_start:x_end]
+                metadata["profile"].update({
+                    "width": x_end - x_start,
+                    "height": y_end - y_start
+                })
             # Step 7: Save as GeoTIFF
             output_filename = os.path.splitext(os.path.basename(geotiff))[0] + '_segmented.tif'
             geotiff_output_filepath = os.path.join(segmented_folder, output_filename)

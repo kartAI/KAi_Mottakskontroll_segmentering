@@ -100,7 +100,7 @@ def createCenterLines(input_geotiff, save, output_geojson, zone, utmOrLatLon, lo
         count (int): Number in the order of GeoTIFF when saved as GeoJSON, default None
 
     Returns:
-        float: Total length of the center lines
+        total_distance (float): Total length of the center lines
     """
 
     # Step 1: load raster and extract mask
@@ -162,7 +162,7 @@ def createBoundaries(input_geotiff, save, output_geojson, zone, utmOrLatLon, log
         count (int): Number in the order of GeoTIFF when saved as GeoJSON, default None
     
     Returns:
-        float: Total length of the boundaries
+        total_distance (float): Total length of the boundaries
     """
 
     min_size = 10

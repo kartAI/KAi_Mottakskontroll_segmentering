@@ -2,7 +2,6 @@
 
 # Libraries:
 
-from collections import deque
 import numpy as np
 import os
 import sys

@@ -57,5 +57,3 @@ def mainValidation():
     # Deletes unnecessary data:
     if os.path.exists(mask_folder):
         shutil.rmtree(mask_folder)
-    """if os.path.exists(result_folder):
-        shutil.rmtree(result_folder)"""

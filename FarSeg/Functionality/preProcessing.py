@@ -3,7 +3,6 @@
 # Libraries:
 
 import geopandas as gpd
-import glob
 import numpy as np
 import os
 from pyproj import CRS
@@ -94,30 +93,27 @@ class preProcessor():
     the GeoTIFF data before training and inferencing.
 
     Attributes:
-        split (float): Split ratio for training and validation
         output (string): Path to output folder to store tiles
         width (int): Image width of the tile, default 1024
         height (int): Image height of the tile, default 1024
     """
 
-    def __init__(self, split, output, width=1024, height=1024):
+    def __init__(self, output, width=1024, height=1024):
         """
         Creates an instance of preProcessor.
 
         Arguments:
-            split (float): Split ratio for training and validation
             output (string): Path to output folder to store tiles
             width (int): Image width of the tile, default 1024
             height (int): Image height of the tile, default 1024
         """
-        self.split_ratio = split
         self.output = output
         self.width = width
         self.height = height
 
-    def generate_tiles(self, geotiff, remove=True, count=False):
+    def generate_tiles_overlap(self, geotiff, remove=True, count=False):
         """
-        Splits a GeoTIFF into tiles and saves it in specified folder.
+        Splits a GeoTIFF into tiles with 25% overlap in width and height and saves them in specified folder.
 
         Arguments:
             geotiff (string): Path to the GeoTIFF to split
@@ -131,27 +127,19 @@ class preProcessor():
             gf.emptyFolder(self.output)
         imageHandler = imageSaver()
         data, metadata = imageHandler.readGeoTIFF(geotiff)
-        count_x = (metadata["width"] + self.width - 1) // self.width
-        count_y = (metadata["height"] + self.height - 1) // self.height
+        jump = int(self.width * 0.75)
+        x, y = self.width, self.height
+        i, j = 0, 0
         # Iterates over the grid without overlap:
-        for i in range(count_y):
-            for j in range(count_x):
+        while y <= data.shape[0]:
+            while x <= data.shape[1]:
                 # Calculates the window position without overlap:
-                x_start = j * self.width
-                y_start = i * self.height
-                x_end = min(x_start + self.width, metadata["width"])
-                y_end = min(y_start + self.height, metadata["height"])
+                x_end = x
+                y_end = y
+                x_start = x_end - self.width
+                y_start = y_end - self.height
                 # Extracts the tile data from the numpy array:
                 tile_data = data[y_start:y_end, x_start:x_end]
-                # Handles padding if the tile is smaller than the specified size:
-                if tile_data.shape[0] < self.height or tile_data.shape[1] < self.width:
-                    padded_tile = np.full(
-                        (self.height, self.width, tile_data.shape[2]),
-                        0 if metadata.get("nodata", 0) == None else metadata.get("nodata", 0),
-                        dtype=tile_data.dtype
-                    )
-                    padded_tile[:tile_data.shape[0], :tile_data.shape[1], :] = tile_data
-                    tile_data = padded_tile
                 # Adjust the transform for the current tile:
                 new_transform = metadata["transform"] * rasterio.Affine.translation(x_start, y_start)
                 # Defines output filename:
@@ -161,11 +149,27 @@ class preProcessor():
                     filename = os.path.join(self.output, f"tile_{i}_{j}.tif")
                 # Saves the tile:
                 self.save_tile(tile_data, new_transform, metadata, filename)
-        return count_x * count_y
+                j += 1
+                if x != data.shape[1]:
+                    x += jump
+                if x > data.shape[1]:
+                    x = data.shape[1]
+                elif x == data.shape[1]:
+                    x = np.inf
+            x = self.width
+            j = 0
+            i += 1
+            if y != data.shape[0]:
+                y += jump
+            if y > data.shape[0]:
+                y = data.shape[0]
+            elif y == data.shape[0]:
+                y = np.inf
+        return i * j
     
-    def generate_tiles_2(self, geotiff, remove=True, count=False):
+    def generate_tiles_no_overlap(self, geotiff, remove=True, count=False):
         """
-        Splits a GeoTIFF into tiles and saves it in specified folder.
+        Splits a GeoTIFF into tiles and saves it in specified folder. Here it is no overlap except for the last row and column to avoid no-data value in the tile.
 
         Arguments:
             geotiff (string): Path to the GeoTIFF to split
@@ -225,48 +229,7 @@ class preProcessor():
         with rasterio.open(filename, 'w', **profile) as dst:
             dst.write(tile_data)
 
-    def split_data(self, folder=None, liste=None):
-        """
-        Splits the GeoTIFFs from the folder in training and validation sets.
-
-        Arguments:
-            folder (string): Path to the folder containing the GeoTIFFs, default None
-            liste (list[string]): List of GeoTIFF paths, default None
-        
-        Returns:
-            list[string]: Lists of file paths, training and validation sets
-            If no GeoTIFF files were found, return None
-        """
-        if folder != None:
-            files = glob.glob(folder + '/*.tif')
-        elif liste != None:
-            files = liste
-        if len(files) == 0:
-            return None
-        np.random.shuffle(files)
-        split_idx = int(len(files) * self.split_ratio)
-        return files[:split_idx], files[split_idx:]
-
 # Helper functions:
-
-def tile_contains_valid_data(tile_data, nodata):
-    """
-    Checks if not all pixels in the tile contains nnodata value
-    (Ensure some valid data / pixels)
-
-    Arguments:
-        tile_data (ndarray): ndarray representation of the image
-        nodata (int): The nodata value of the image
-    
-    Returns:
-        bool: Wether or not some of the tiles are valid
-    """
-    if nodata is not None:
-        # Checks if all pixels are nodata: if so, return False
-        return not np.all(tile_data == nodata)
-    else:
-        # If no nodata value is defined: assume all pixels have valid data
-        return True
 
 def geotiff_to_geopackage(input_tiff, output_gpkg, layer_name, log_file):
     """
@@ -307,7 +270,7 @@ def geotiff_to_geopackage(input_tiff, output_gpkg, layer_name, log_file):
     ]
 
     if not geoms:
-        gf.log(log_file, f"No geometries found in {input_tiff}. Skips.")
+        gf.log_info(log_file, f"No geometries found in {input_tiff}. Skips.")
         return
 
     # Convert to GeoDataFrame:

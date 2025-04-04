@@ -143,7 +143,14 @@ def parse_tile_filename(filename, segmented=False):
 
 def remove_noise(mask):
         """
-        ...
+        Removes noise from the segmented mask.
+        Every area consisting of less than (here) 750 pixels are removed and marked as background.
+
+        Argument:
+            mask (np.array): A numpy array with 0 = background, 1 = detected
+
+        Returns:
+            cleaned_mask (np.array): A new numpy array with small areas removed
         """
         if np.all(mask == 0):
             return mask

@@ -18,7 +18,7 @@ from Functionality import generalFunctions as gf
 from Functionality.farSegModel import initialize_model
 from Functionality.geoTIFFandJPEG import imageSaver
 from Functionality.postProcessing import postProcessor, remove_noise
-from Functionality.preProcessing import preProcessor, tile_contains_valid_data, geotiff_to_geopackage
+from Functionality.preProcessing import preProcessor, geotiff_to_geopackage
 
 # Function:
 
@@ -87,7 +87,7 @@ Saves as jpg as well: {choice}
     # Runs inference on new GeoTIFFs:
     geotiff_paths = glob.glob(geotiff_folder + '/*.tif')
     gf.log_info(log_file, f"Number of geotiffs: {len(geotiff_paths)}\n")
-    tileGenerator = preProcessor(0.7, tile_folder)
+    tileGenerator = preProcessor(tile_folder)
     imageCombiner = postProcessor(tile_folder, segmented_folder)
     imageHandler = imageSaver()
     for k, path in enumerate(tqdm(geotiff_paths, desc="GeoTIFFs segmented", colour="yellow")):
@@ -96,7 +96,7 @@ Saves as jpg as well: {choice}
         original_size = (info["height"], info["width"])
         image_crs = info["crs"]
         # Step 1: Generate tiles from the input GeoTIFF
-        tileGenerator.generate_tiles_2(path)
+        tileGenerator.generate_tiles_no_overlap(path)
         splitted_geotiffs = [os.path.join(tile_folder, f) for f in os.listdir(tile_folder) if f.endswith('.tif')]
         # Step 2: Iterate over all the tiles
         for _, geotiff in enumerate(tqdm(splitted_geotiffs, desc=f"Tiles processed for GeoTIFF {k+1}", colour="green", leave=False)):
@@ -118,19 +118,13 @@ Saves as jpg as well: {choice}
             # Apply the transformation (ToTensor converts image to shape: (bands, height, width)):
             image_tensor = transform(image_data).unsqueeze(0).to(device) # Add batch dimension for model input
             # Step 5: Performe inference
-            boolean = tile_contains_valid_data(image_data, metadata.get("nodata", 0))
-            if not boolean:
-                # Generate empty tile
-                predicted_segmented_mask = np.zeros((metadata["height"], metadata["width"], 3), dtype=np.uint8)
-            else:
-                with torch.no_grad():
+            with torch.no_grad():
                     output = model(image_tensor) # Forward pass through the model
                     predicted_segmented_mask = output.squeeze(0).argmax(0).cpu().numpy() # Shape: (height, width)
             # Step 6: Create an RGB image from the segmentation classes
             segmented_image_rgb = predicted_segmented_mask
-            if boolean:
-                segmented_image_rgb = colors[predicted_segmented_mask]
-                segmented_image_rgb = remove_noise(segmented_image_rgb)
+            segmented_image_rgb = colors[predicted_segmented_mask]
+            segmented_image_rgb = remove_noise(segmented_image_rgb)
             metadata["profile"].update({
                 'count': 3, # 3 channels for RGB
                 'dtype': 'uint8',

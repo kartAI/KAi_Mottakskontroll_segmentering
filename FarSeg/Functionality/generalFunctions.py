@@ -134,6 +134,13 @@ def correctUTMZone(zone):
 
 def correctObjectType(obj):
     """
+    Checks if the user input is one of the valid object types to be analysed in this code.
+
+    Argument:
+        obj (string): Object type to be analysed
+    
+    Returns:
+        bool: True if valid object type, False otherwise
     """
     valid_objects = ["buildings", "roads"]
     return obj.lower() in valid_objects

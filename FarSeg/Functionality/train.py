@@ -42,7 +42,7 @@ def train(model, train_loaders, val_loader, criterion, optimizer, num_epochs, pa
         epoch_loss = 0
         model.train()
         for train_loader in train_loaders:
-            for (images, masks) in train_loader: # for _, (images, masks) in enumerate(train_loader, 1):
+            for (images, masks) in train_loader:
                 images, masks = images.to(device), masks.to(device)
                 optimizer.zero_grad()
                 # Ensures masks are 3D (batch_size, height, width):
@@ -82,10 +82,6 @@ Average IoU score: {avg_iou}
             )
         early_stopping(avg_val_loss, log_file=log_file)
         torch.cuda.empty_cache()
-        """
-        if avg_iou > 0.85:
-            early_stopping.early_stop = True
-        """
         if early_stopping.early_stop:
             if log_file != None:
                 gf.log_info(

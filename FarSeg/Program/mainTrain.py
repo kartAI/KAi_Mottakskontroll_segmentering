@@ -74,7 +74,7 @@ def mainTrain():
             model.load_state_dict(torch.load(model_path, weights_only=True))
     # Initializes the pre-processing element:
     gf.emptyFolder(validation_folder + "/Tiles")
-    preProcessing = preProcessor(0, validation_folder + "/Tiles")
+    preProcessing = preProcessor(validation_folder + "/Tiles")
     # Give a name for the trained model:
     model_path = gf.get_valid_input("Where will you save the model(?): ", gf.emptyFolder)
     model_name = input("Give the model a name (ends with '.pth'): ")
@@ -104,6 +104,7 @@ Hyper parameters:
 - Classes: {num_classes}
 - Patience: {patience}
 - Minimum improvement: {min_improvement}
+
 The trained model will be saved as:
 Folder: {model_path}
 File: {model_name}
@@ -144,7 +145,7 @@ Training files for {name}: {len(train_files)}
         train_loaders.append(train_loader)
     # Step 4: Fetch validation data
     for i, geotiff in enumerate(glob.glob(validation_folder + '/*.tif')):
-        preProcessing.generate_tiles(geotiff, remove=False, count=i+1)
+        preProcessing.generate_tiles_no_overlap(geotiff, remove=False, count=i+1)
     val_files = glob.glob(validation_folder + "/Tiles" + "/*.tif")
     if val_files == None or len(val_files) == 0:
             return

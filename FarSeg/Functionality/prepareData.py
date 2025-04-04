@@ -205,6 +205,12 @@ def categorizeGeoTIFFBuilding(geodata, geotiff, output, classes):
 
 def categorizeGeoTIFFRoads(geodata, geotiff, output):
     """
+    Creates a new GeoTIFF with categorized raster depending on the type of the roads
+
+    Arguments:
+        geodata (string): Path to the GeoPackage file with relevant data
+        geotiff (string): Path to the GeoTIFF file
+        output (string): Path to the file in the output folder
     """
     gdf = gpd.read_file(geodata)
 

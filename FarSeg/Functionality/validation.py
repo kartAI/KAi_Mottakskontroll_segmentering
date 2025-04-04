@@ -6,7 +6,6 @@ import glob
 import numpy as np
 import os
 import rasterio
-from shapely.geometry import box
 from tqdm import tqdm
 
 import generalFunctions as gf
@@ -14,53 +13,6 @@ from geoTIFFandJPEG import imageSaver
 import vectorization as V
 
 # Classes:
-
-class tileValidation():
-    """
-    Instance validating tiles of images to use for DL training.
-
-    Attribute:
-        folder (string): Path to the folder containing relevant geopackage data
-    """
-
-    def __init__(self, folder):
-        """
-        Creates a new instance of tileValidation.
-
-        Argument:
-            folder (string): Path to the folder containing relevant geopackage data
-        """
-        self.geopackages = gf.load_geopackages(folder)
-    
-    def validate(self, tile_folder, validate):
-        """
-        Validates the tiles depending on overlap with geopackages.
-
-        Arguments:
-            tile_folder (string): Path to the folder containing the GeoTIFFs
-            validate (bool): Wether or not to validate the tiles
-        
-        Returns:
-            valid_tiles (list[string]): A list with the file path to all valid tiles if requested
-        """
-        tile_paths = [os.path.join(tile_folder, f) for f in os.listdir(tile_folder) if f.endswith('.tif')]
-        valid_tiles = []
-
-        for path in tqdm(tile_paths, desc="Validated tiles", colour="green", leave=False):
-            if validate:
-                with rasterio.open(path) as tile:
-                    # Fetches the bounding box of the tile in coordinates:
-                    bounds = tile.bounds
-                    tile_box = box(*bounds)
-                    # Checks if any buildings or roads overlaps with the tile:
-                    for layer in self.geopackages:
-                        if self.geopackages[layer].intersects(tile_box).any():
-                            valid_tiles.append(path)
-                            break
-            else:
-                valid_tiles.append(path)
-        
-        return valid_tiles
 
 class validation():
     """

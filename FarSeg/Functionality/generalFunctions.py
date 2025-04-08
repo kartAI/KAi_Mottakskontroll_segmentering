@@ -4,6 +4,7 @@
 
 import geopandas as gpd
 import os
+from shapely.geometry import Polygon
 from shapely.validation import make_valid
 import shutil
 import sys
@@ -145,9 +146,30 @@ def correctObjectType(obj):
     valid_objects = ["buildings", "roads"]
     return obj.lower() in valid_objects
 
-def load_geopackages(folder):
+def get_min_rectangle_side(geom):
     """
-    Load geometries for relevant map objects from multiple GeoPackages in a folder.
+    Fetches the lengths of the sides in the minimum bounding rectangle (MBR) that is oriented along the geometry.
+
+    Arguments:
+        geom (geometry): The polygon to create an oriented MBR around
+
+    Returns:
+        floats: The lenghts of the side of the rectangle, sorted as minimum, maximum
+    """
+    rect = geom.minimum_rotated_rectangle
+    if not isinstance(rect, Polygon):
+        return None, None
+    coords = list(rect.exterior.coords)
+    if len(coords) != 5:
+        return None, None
+    p1, p2, p3 = coords[0], coords[1], coords[2]
+    len1 = ((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)**0.5
+    len2 = ((p2[0] - p3[0])**2 + (p2[1] - p3[1])**2)**0.5
+    return min(len1, len2), max(len1, len2)
+
+def load_geopackages(folder, small_objects=True):
+    """
+    Load geometries for relevant map objects from multiple GeoPackages in a folder. Removes smaller objects if required.
 
     Argument:
         folder (string): File path to the folder containing the geopackages
@@ -162,6 +184,25 @@ def load_geopackages(folder):
         gdf = gpd.read_file(filepath)
         gdf['geometry'] = gdf['geometry'].apply(make_valid)
         gdf = gdf[gdf['geometry'].notnull() & ~gdf['geometry'].is_empty]
+
+        def is_large_enough(geom):
+            """
+            Function telling if a geometry is large enough to be used.
+
+            Argument:
+                geom (geometry): The geometry data to be checked
+
+            Returns:
+                bool: True if the geom is large enough, False otherwise
+            """
+            short_side, long_side = get_min_rectangle_side(geom)
+            if short_side is None or long_side is None:
+                return False
+            threshold = 5
+            return short_side >= threshold and long_side >= threshold
+        
+        if not small_objects:
+            gdf = gdf[gdf['geometry'].apply(is_large_enough)]
         geodata[f"{os.path.basename(filepath).split('.')[0]}"] = gdf
     
     return geodata

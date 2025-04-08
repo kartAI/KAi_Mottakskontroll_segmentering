@@ -52,7 +52,7 @@ class validation():
         gf.emptyFolder(mask_folder)
         gf.emptyFolder(mask_folder + "_final")
 
-        imageHandler = imageSaver(self.geopackages)
+        imageHandler = imageSaver(self.geopackages, small_objects=False)
 
         tp, tn, fp, fn = 0, 0, 0, 0
         mask_lines, mask_boundaries, segmented_lines, segmented_boundaries = 0, 0, 0, 0

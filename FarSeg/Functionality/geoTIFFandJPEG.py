@@ -22,7 +22,7 @@ class imageSaver():
         folder (None, string): A string with the path to the folder containing relevant geopackage data, default None
     """
 
-    def __init__(self, folder=None):
+    def __init__(self, folder=None, small_objects=True):
         """
         Creates a new instance of imageSaver.
 
@@ -30,7 +30,7 @@ class imageSaver():
             folder (string): A string with the path to the folder containing relevant geopackage data
         """
         if folder != None:
-            self.geopackages = gf.load_geopackages(folder)
+            self.geopackages = gf.load_geopackages(folder, small_objects=small_objects)
         else:
             self.geopackages = None
     

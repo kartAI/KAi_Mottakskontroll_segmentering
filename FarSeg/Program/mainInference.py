@@ -71,7 +71,7 @@ Saves as jpg as well: {choice}
     # Fetches GPU or CPU device:
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     gf.log_info(log_file, f"\nDevice: {device}\n")
-    geodata = gf.load_geopackages(geodata_folder) # {"Building": [...], "Roads": [...], ...}
+    geodata = gf.load_geopackages(geodata_folder, small_objects=False) # {"Building": [...], "Roads": [...], ...}
     # Load the trained model:
     num_classes = len(geodata) + 1
     model, _, _ = initialize_model(num_classes)
@@ -124,14 +124,12 @@ Saves as jpg as well: {choice}
             # Step 6: Create an RGB image from the segmentation classes
             segmented_image_rgb = predicted_segmented_mask
             segmented_image_rgb = colors[predicted_segmented_mask]
-            segmented_image_rgb = remove_noise(segmented_image_rgb)
             metadata["profile"].update({
                 'count': 3, # 3 channels for RGB
                 'dtype': 'uint8',
                 'photometric': 'RGB',
                 'crs': image_crs
             })
-            # Extra:
             # Crop output if it is the end of the image
             x, y = int(geotiff.split('_')[-1].split('.')[0]) == ((original_size[1] + 1023) // 1024) - 1, int(geotiff.split('_')[-2]) == ((original_size[0] + 1023) // 1024) - 1
             if x or y:
@@ -150,6 +148,8 @@ Saves as jpg as well: {choice}
         output_original = os.path.join(output_folder, f"merged_original_tif_{k+1}.tif")
         output_segmented = os.path.join(output_folder, f"merged_segmented_tif_{k+1}.tif")
         imageCombiner.merge_images(output_original, output_segmented, original_size, choice)
+    
+        remove_noise(output_segmented, geodata)
 
         gf.log_info(
             log_file,

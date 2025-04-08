@@ -2,10 +2,16 @@
 
 # Libraries:
 
-import cv2
 import numpy as np
 import os
+import rasterio
+from rasterio.features import shapes
+import rasterio.features
 import re
+from shapely.geometry import shape
+from shapely.geometry.polygon import orient
+from shapely.validation import make_valid
+from tqdm import tqdm
 
 from geoTIFFandJPEG import imageSaver
 
@@ -141,23 +147,63 @@ def parse_tile_filename(filename, segmented=False):
             raise ValueError(f"Filename  {filename} does not match expected pattern 'tile_<row>_<col>_segmented.tif")
         raise ValueError(f"Filename  {filename} does not match expected pattern 'tile_<row>_<col>.tif")
 
-def remove_noise(mask):
+def remove_noise(mask, geodata):
         """
-        Removes noise from the segmented mask.
-        Every area consisting of less than (here) 750 pixels are removed and marked as background.
+        Removes noise from the segmented mask and saves it as a new GeoTIFF.
+        Every area that has a rotated MBR with a side lenght shorter than 5 m are removed.
 
         Argument:
-            mask (np.array): A numpy array with 0 = background, 1 = detected
-
-        Returns:
-            cleaned_mask (np.array): A new numpy array with small areas removed
+            mask (string): The string to the GeoTIFF that is segmented
         """
-        if np.all(mask == 0):
-            return mask
-        gray = cv2.cvtColor(mask, cv2.COLOR_RGB2GRAY)
-        contours, _ = cv2.findContours(gray, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        cleaned_mask = np.zeros_like(mask)
-        for contour in contours:
-            if cv2.contourArea(contour) >= 750:
-                cv2.drawContours(cleaned_mask, [contour], -1, (255, 255, 255), thickness=cv2.FILLED)
-        return cleaned_mask
+        imageHandler = imageSaver()
+        data, metadata = imageHandler.readGeoTIFF(mask)
+
+        transform = metadata["transform"]
+        if transform is None:
+            raise ValueError("GeoTIFF is missing transformation information!")
+        
+        ############################
+        # Validate the use of this #
+        ############################
+
+        _, gdf = list(geodata.items())[0]
+        gdf = gdf["geometry"]
+        
+        data = data[:, :, 0]
+        cleaned_mask = np.zeros_like(data, dtype=np.uint8)
+
+        for geom, val in tqdm(shapes(data, mask=None, transform=metadata["transform"], connectivity=4)):
+            if val == 0:
+                continue
+            polygon = make_valid(shape(geom))
+            if not polygon.is_valid or polygon.is_empty:
+                continue
+            oriented = orient(polygon)
+            mbr = oriented.minimum_rotated_rectangle
+            coords = list(mbr.exterior.coords)
+            if len(coords) < 4:
+                continue
+            
+            def dist(p1, p2):
+                x1, y1 = p1
+                x2, y2 = p2
+                return ((x2 - x1)**2 + (y2 - y1)**2)**0.5
+            
+            side1 = dist(coords[0], coords[1])
+            side2 = dist(coords[1], coords[2])
+            threshold = 5
+            if side1 > threshold and side2 > threshold:
+                if gdf.intersects(mbr).any(): # Important! #
+                    rasterized = rasterio.features.rasterize(
+                        [(polygon, 1)],
+                        out_shape=cleaned_mask.shape,
+                        transform=transform,
+                        fill=0,
+                        dtype=np.uint8
+                    )
+                    cleaned_mask = np.maximum(cleaned_mask, rasterized)
+        cleaned_mask_rgb = np.stack([cleaned_mask] * 3, axis=-1)
+        cleaned_mask_rgb = cleaned_mask_rgb * 255
+        metadata.pop("profile", None)
+        with rasterio.open(mask, 'w', **metadata) as dst:
+            dst.write(cleaned_mask_rgb.transpose(2, 0, 1))

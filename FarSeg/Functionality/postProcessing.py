@@ -147,7 +147,7 @@ def parse_tile_filename(filename, segmented=False):
             raise ValueError(f"Filename  {filename} does not match expected pattern 'tile_<row>_<col>_segmented.tif")
         raise ValueError(f"Filename  {filename} does not match expected pattern 'tile_<row>_<col>.tif")
 
-def remove_noise(mask, geodata):
+def remove_noise(mask):
         """
         Removes noise from the segmented mask and saves it as a new GeoTIFF.
         Every area that has a rotated MBR with a side lenght shorter than 5 m are removed.
@@ -161,13 +161,6 @@ def remove_noise(mask, geodata):
         transform = metadata["transform"]
         if transform is None:
             raise ValueError("GeoTIFF is missing transformation information!")
-        
-        ############################
-        # Validate the use of this #
-        ############################
-
-        _, gdf = list(geodata.items())[0]
-        gdf = gdf["geometry"]
         
         data = data[:, :, 0]
         cleaned_mask = np.zeros_like(data, dtype=np.uint8)
@@ -193,15 +186,14 @@ def remove_noise(mask, geodata):
             side2 = dist(coords[1], coords[2])
             threshold = 5
             if side1 > threshold and side2 > threshold:
-                if gdf.intersects(mbr).any(): # Important! #
-                    rasterized = rasterio.features.rasterize(
-                        [(polygon, 1)],
-                        out_shape=cleaned_mask.shape,
-                        transform=transform,
-                        fill=0,
-                        dtype=np.uint8
-                    )
-                    cleaned_mask = np.maximum(cleaned_mask, rasterized)
+                rasterized = rasterio.features.rasterize(
+                    [(polygon, 1)],
+                    out_shape=cleaned_mask.shape,
+                    transform=transform,
+                    fill=0,
+                    dtype=np.uint8
+                )
+                cleaned_mask = np.maximum(cleaned_mask, rasterized)
         cleaned_mask_rgb = np.stack([cleaned_mask] * 3, axis=-1)
         cleaned_mask_rgb = cleaned_mask_rgb * 255
         metadata.pop("profile", None)

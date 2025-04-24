@@ -149,7 +149,7 @@ Saves as jpg as well: {choice}
         output_segmented = os.path.join(output_folder, f"merged_segmented_tif_{k+1}.tif")
         imageCombiner.merge_images(output_original, output_segmented, original_size, choice)
     
-        remove_noise(output_segmented, geodata)
+        remove_noise(output_segmented)
 
         gf.log_info(
             log_file,

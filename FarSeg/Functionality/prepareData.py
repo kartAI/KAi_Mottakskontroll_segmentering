@@ -13,6 +13,7 @@ from rasterio.features import rasterize
 from rasterio.windows import from_bounds
 from scipy.ndimage import label
 from shapely.geometry import Polygon, MultiPolygon
+import shutil
 from tqdm import tqdm
 
 import generalFunctions as gf
@@ -408,5 +409,10 @@ def fetchCategorizedTiles(geodata, geotiff, mask, tile_folder, count, object_typ
                 # Save the new tile of the aerial image:
                 out_file = os.path.join(tile_folder_original, os.path.basename(file))
                 preProcessing.save_tile(data, new_transform, metadata, out_file)
+
+    if os.path.exists(tile_folder_categorized):
+        shutil.rmtree(tile_folder_categorized)
+    if os.path.exists(mask):
+        os.remove(mask)
 
     return glob.glob(tile_folder_original + "/*.tif")

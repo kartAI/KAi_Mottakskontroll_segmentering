@@ -4,6 +4,7 @@
 
 import glob
 import os
+import random
 import shutil
 import sys
 import torch
@@ -110,59 +111,56 @@ Folder: {model_path}
 File: {model_name}
 """
     )
-
-    train_loaders = []
     
-    for i, geotiff in enumerate(tif_files): # For every GeoTIFF in the training set
+    gpkg = [os.path.basename(file).split('.')[0] for file in os.listdir(geodata_folder) if file.endswith('.gpkg')][0]
+    
+    more = False
+    if len(tif_files) > 1:
+        random.shuffle(tif_files)
+        more = True
+
+    train_files = []
+    
+    for i, geotiff in enumerate(tif_files if not more else tif_files[:int(len(tif_files)*0.8)]): # For every GeoTIFF in the training set
         # Step 1: Generate categorized tiles for the GeoTIFF
-        name = os.path.basename(geotiff).split('.')[0] # Fetches the name of the area - corresponding between GeoPackage and GeoTIFF
-        if '_' in name:
-            name = name.split('_')[0]
-        
-        gpkg = [file for file in geodata_gpkg if file.split('.')[0] == name][0]
-        
-        train_files = fetchCategorizedTiles(
-            os.path.join(geodata_folder, gpkg),
+        train_files.extend(fetchCategorizedTiles(
+            os.path.join(geodata_folder, f"{gpkg}.gpkg"),
             geotiff,
             f"{tile_folder}/mask_{i + 1}.tif",
             tile_folder,
             i + 1,
             object_type
-        )
-        if train_files == None or len(train_files) == 0:
-            return
+        ))
         
-        gf.log_info(
-            log_file,
+    gf.log_info(
+        log_file,
 f"""
-Training files for {name}: {len(train_files)}
+Training files: {len(train_files)}
 """
-            )
+        )
 
-        # Step 3: Prepare datasets and dataloaders for training for the current tiles
-        train_dataset = MapSegmentationDataset(train_files, {name: geopackages[name]})
-        train_loader = DataLoader(train_dataset, batch_size=batches, shuffle=True, num_workers=num_workers)
-        train_loaders.append(train_loader)
-    # Step 4: Fetch validation data
-    for i, geotiff in enumerate(glob.glob(validation_folder + '/*.tif')):
+    # Step 2: Prepare datasets and dataloaders for training for the current tiles
+    train_dataset = MapSegmentationDataset(train_files, {gpkg: geopackages[gpkg]})
+    train_loader = DataLoader(train_dataset, batch_size=batches, shuffle=True, num_workers=num_workers)
+    # Step 3: Fetch validation data
+    for i, geotiff in enumerate(glob.glob(validation_folder + '/*.tif') if not more else tif_files[int(len(tif_files)*0.8):]):
         preProcessing.generate_tiles_no_overlap(geotiff, remove=False, count=i+1)
     val_files = glob.glob(validation_folder + "/Tiles" + "/*.tif")
     if val_files == None or len(val_files) == 0:
             return
-    name = os.path.basename(glob.glob(validation_folder + '/*.tif')[0].split('.')[0])
     gf.log_info(
         log_file,
 f"""
 Validation files: {len(val_files)}
 """
     )
-    val_dataset = MapSegmentationDataset(val_files, {name: geopackages[name]})
+    val_dataset = MapSegmentationDataset(val_files, {gpkg: geopackages[gpkg]})
     val_loader = DataLoader(val_dataset, batch_size=batches, shuffle=False, num_workers=num_workers)
     torch.cuda.empty_cache()
-    # Step 5: Train the model on the generated tiles based on the categorization
+    # Step 4: Train the model on the generated tiles based on the categorization
     loss = train(
         model=model,
-        train_loaders=train_loaders,
+        train_loader=train_loader,
         val_loader=val_loader,
         criterion=criterion,
         optimizer=optimizer,
@@ -173,12 +171,14 @@ Validation files: {len(val_files)}
         output=True,
         log_file=log_file
     )
-    # Step 6: Clear tiles in the folder to prepare for next GeoTIFF
+    # Step 5: Clear tiles in the folder to prepare for next GeoTIFF
     del train_dataset, val_dataset, train_loader, val_loader, loss
     torch.cuda.empty_cache()
     # Removes the tile_folder after training:
     if os.path.exists(tile_folder):
         shutil.rmtree(tile_folder)
+    if os.path.exists(validation_folder + "/Tiles"):
+        shutil.rmtree(validation_folder + "/Tiles")
 
     gf.log_info(
         log_file,

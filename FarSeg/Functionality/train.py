@@ -12,7 +12,7 @@ import generalFunctions as gf
 
 # Functions:
 
-def train(model, train_loaders, val_loader, criterion, optimizer, num_epochs, patience, min_delta, save_path=None, output=False, log_file=None):
+def train(model, train_loader, val_loader, criterion, optimizer, num_epochs, patience, min_delta, save_path=None, output=False, log_file=None):
     """
     Training loop for FarSeg segmentation model.
 
@@ -41,32 +41,31 @@ def train(model, train_loaders, val_loader, criterion, optimizer, num_epochs, pa
     for i in tqdm(range(num_epochs), desc='Epochs', colour="yellow"):
         epoch_loss = 0
         model.train()
-        for train_loader in train_loaders:
-            for (images, masks) in train_loader:
-                images, masks = images.to(device), masks.to(device)
-                optimizer.zero_grad()
-                # Ensures masks are 3D (batch_size, height, width):
-                if masks.dim() == 4:
-                    masks = masks.squeeze(1) # Remove the channel dimension if it exists
-                # Convert masks to LongTensor for the loss function:
-                masks = masks.long()
-                with torch.amp.autocast(device_type='cuda', dtype=torch.bfloat16):
-                    outputs = model(images) # Forward pass
-                    # output shapes: (batch_size, num_classes, height, width)
-                    # mask shapes: (batch_size, height, width), with class indices: (0: background, 1: object type)
-                    # Calculates loss:
-                    loss = criterion(outputs, masks)
-                # Scale the loss:
-                scaled_loss = scaler.scale(loss)
-                # Backward pass with scaled loss:
-                scaled_loss.backward()
-                scaler.step(optimizer)
-                scaler.update()
-                epoch_loss += loss.item()
-                # Clear CUDA cache to prevent memory buildup:
-                del images, masks, outputs, loss
-                torch.cuda.empty_cache()
-                torch.cuda.synchronize()
+        for (images, masks) in train_loader:
+            images, masks = images.to(device), masks.to(device)
+            optimizer.zero_grad()
+            # Ensures masks are 3D (batch_size, height, width):
+            if masks.dim() == 4:
+                masks = masks.squeeze(1) # Remove the channel dimension if it exists
+            # Convert masks to LongTensor for the loss function:
+            masks = masks.long()
+            with torch.amp.autocast(device_type='cuda', dtype=torch.bfloat16):
+                outputs = model(images) # Forward pass
+                # output shapes: (batch_size, num_classes, height, width)
+                # mask shapes: (batch_size, height, width), with class indices: (0: background, 1: object type)
+                # Calculates loss:
+                loss = criterion(outputs, masks)
+            # Scale the loss:
+            scaled_loss = scaler.scale(loss)
+            # Backward pass with scaled loss:
+            scaled_loss.backward()
+            scaler.step(optimizer)
+            scaler.update()
+            epoch_loss += loss.item()
+            # Clear CUDA cache to prevent memory buildup:
+            del images, masks, outputs, loss
+            torch.cuda.empty_cache()
+            torch.cuda.synchronize()
         # Validate at the end of each epoch:
         avg_train_loss = epoch_loss / len(train_loader)
         avg_val_loss, avg_iou = validate(model, val_loader, criterion, device)

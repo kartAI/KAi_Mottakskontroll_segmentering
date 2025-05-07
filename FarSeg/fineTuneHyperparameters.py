@@ -114,7 +114,7 @@ Number of tiles for validation: {len(val_files)}
         # Train the model with current hyperparameters:
         val_loss = train(
             model,
-            [train_loader],
+            train_loader,
             val_loader,
             criterion,
             optimizer,
